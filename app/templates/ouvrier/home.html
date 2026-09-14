@@ -2,6 +2,46 @@
 {% block title %}Mon espace{% endblock %}
 
 {% block content %}
-  <h1>Bonjour {{ user.nom }}</h1>
-  <p>L'écran de pointage (arrivée / pause / départ) arrive à l'étape 2.</p>
+  <h1>Bonjour {{ current_user.nom }}</h1>
+
+  <section class="card">
+    {% if etat == "pas_arrive" %}
+      <p>Tu n'es pas encore arrivé sur un chantier.</p>
+      {% if chantiers_du_jour %}
+        <form method="post" action="{{ url_for('ouvrier.arrivee') }}" class="form">
+          <label for="chantier_id">Chantier</label>
+          <select name="chantier_id" id="chantier_id" required>
+            <option value="" disabled selected>Choisir un chantier</option>
+            {% for c in chantiers_du_jour %}
+              <option value="{{ c.id }}">{{ c.nom }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-primary">Arrivée sur chantier</button>
+        </form>
+      {% else %}
+        <p class="hint">Aucun chantier prévu aujourd'hui. Contacte le patron si c'est une erreur.</p>
+      {% endif %}
+
+    {% elif etat == "sur_chantier" %}
+      <p>Tu es actuellement sur : <strong>{{ chantier_actif.nom }}</strong></p>
+      <form method="post" action="{{ url_for('ouvrier.pause') }}">
+        <button type="submit" class="btn btn-secondary">Pause</button>
+      </form>
+      <form method="post" action="{{ url_for('ouvrier.depart') }}">
+        <button type="submit" class="btn btn-danger">Départ chantier</button>
+      </form>
+
+    {% elif etat == "en_pause" %}
+      <p>En pause sur : <strong>{{ chantier_actif.nom }}</strong></p>
+      <form method="post" action="{{ url_for('ouvrier.reprise') }}">
+        <button type="submit" class="btn btn-primary">Reprise</button>
+      </form>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Mon mois en cours</h2>
+    <p>{{ jours_mois }} jour(s) travaillé(s) — {{ heures_mois }} heure(s) au total</p>
+    <p class="hint">Le statut de la prime d'assiduité sera affiché ici à l'étape 4.</p>
+  </section>
 {% endblock %}

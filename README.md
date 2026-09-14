@@ -31,6 +31,6 @@ Puis ouvrir http://127.0.0.1:5000 dans le navigateur.
 ## État du projet
 
 - [x] Étape 1 — Authentification (login/logout) + base de données (comptes, chantiers, pointages, règles de prime)
-- [ ] Étape 2 — Écran de pointage ouvrier
+- [x] Étape 2 — Écran de pointage ouvrier (arrivée/pause/reprise/départ) + résumé mensuel simple
 - [ ] Étape 3 — Tableau de bord admin (gestion chantiers/ouvriers)
 - [ ] Étape 4 — Calcul des heures et de la prime d'assiduité + export CSV

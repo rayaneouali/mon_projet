@@ -74,6 +74,29 @@ body {
   color: #fff;
 }
 
+.btn-secondary {
+  background: #e5e7eb;
+  color: #1f2430;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.hint {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
 .flash-messages {
   list-style: none;
   padding: 0;
