@@ -1,0 +1,97 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f4f5f7;
+  color: #1f2430;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: #1f2430;
+  color: #fff;
+}
+
+.topbar-title {
+  font-weight: 700;
+}
+
+.topbar-nav {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.topbar-nav a {
+  color: #fff;
+}
+
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form label {
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.form input {
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.flash-messages {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.flash {
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.flash-error {
+  background: #fde2e2;
+  color: #a11;
+}
+
+.flash-info {
+  background: #e2ecfd;
+  color: #1a4;
+}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Connexion{% endblock %}
+
+{% block content %}
+  <h1>Connexion</h1>
+  <form method="post" class="form">
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" required autofocus>
+
+    <label for="mot_de_passe">Mot de passe</label>
+    <input type="password" id="mot_de_passe" name="mot_de_passe" required>
+
+    <button type="submit" class="btn btn-primary">Se connecter</button>
+  </form>
+{% endblock %}
