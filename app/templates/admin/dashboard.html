@@ -2,6 +2,70 @@
 {% block title %}Tableau de bord{% endblock %}
 
 {% block content %}
-  <h1>Tableau de bord admin</h1>
-  <p>Bonjour {{ user.nom }}. Le tableau de bord (chantiers, ouvriers, heures, prime) arrive à l'étape 3.</p>
+  <h1>Tableau de bord</h1>
+
+  <form method="get" class="filtre-form">
+    <div>
+      <label for="mois">Mois</label>
+      <input type="month" id="mois" name="mois" value="{{ mois_str }}" onchange="this.form.submit()">
+    </div>
+    <div>
+      <label for="chantier_id">Chantier</label>
+      <select id="chantier_id" name="chantier_id" onchange="this.form.submit()">
+        <option value="">Tous les chantiers</option>
+        {% for c in chantiers %}
+          <option value="{{ c.id }}" {% if chantier_id == c.id %}selected{% endif %}>{{ c.nom }} ({{ c.date.strftime('%d/%m/%Y') }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="user_id">Salarié</label>
+      <select id="user_id" name="user_id" onchange="this.form.submit()">
+        <option value="">Tous les salariés</option>
+        {% for o in tous_ouvriers %}
+          <option value="{{ o.id }}" {% if user_id_filtre == o.id %}selected{% endif %}>{{ o.nom }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+
+  <p class="nav-mois">
+    <a href="{{ url_for('admin.dashboard', mois=mois_precedent, chantier_id=chantier_id, user_id=user_id_filtre) }}">&larr; Mois précédent</a>
+    &middot;
+    <a href="{{ url_for('admin.dashboard', mois=mois_suivant, chantier_id=chantier_id, user_id=user_id_filtre) }}">Mois suivant &rarr;</a>
+  </p>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Salarié</th>
+        <th>Jours travaillés</th>
+        <th>Heures totales</th>
+        <th>Prime</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ligne in lignes %}
+        <tr>
+          <td>
+            {{ ligne.ouvrier.nom }}
+            {% if not ligne.ouvrier.actif %}<span class="badge badge-muted">désactivé</span>{% endif %}
+          </td>
+          <td>{{ ligne.jours }}</td>
+          <td>{{ ligne.heures }}</td>
+          <td>
+            {% if ligne.prime.acquise %}
+              <span class="badge badge-ok">Acquise</span>
+            {% else %}
+              <span class="badge badge-ko">Non acquise</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">Aucun salarié pour l'instant.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p><a class="btn btn-secondary" href="{{ url_for('admin.export_csv', mois=mois_str) }}">Exporter en CSV ({{ mois_str }})</a></p>
 {% endblock %}

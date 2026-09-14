@@ -17,6 +17,15 @@
     {% endif %}
   </header>
 
+  {% if current_user.is_authenticated and current_user.is_admin %}
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin.dashboard') }}">Tableau de bord</a>
+      <a href="{{ url_for('admin.chantiers') }}">Chantiers</a>
+      <a href="{{ url_for('admin.ouvriers') }}">Ouvriers</a>
+      <a href="{{ url_for('admin.regles') }}">Prime d'assiduité</a>
+    </nav>
+  {% endif %}
+
   <main class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}

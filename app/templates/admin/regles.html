@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Prime d'assiduité{% endblock %}
+
+{% block content %}
+  <h1>Configuration de la prime d'assiduité</h1>
+
+  <form method="post" class="form">
+    <label for="tolerance_retard_min">Tolérance de retard (minutes)</label>
+    <input type="number" min="0" id="tolerance_retard_min" name="tolerance_retard_min"
+           value="{{ regle.tolerance_retard_min }}" required>
+    <p class="hint">Au-delà de l'horaire prévu du chantier + cette tolérance, l'arrivée compte comme un retard.</p>
+
+    <label for="nb_retards_autorises">Retards tolérés dans le mois</label>
+    <input type="number" min="0" id="nb_retards_autorises" name="nb_retards_autorises"
+           value="{{ regle.nb_retards_autorises }}" required>
+
+    <label for="duree_pause_max_min">Durée de pause maximale (minutes)</label>
+    <input type="number" min="0" id="duree_pause_max_min" name="duree_pause_max_min"
+           value="{{ regle.duree_pause_max_min }}" required>
+    <p class="hint">Au-delà, la pause est considérée comme excessive (aucune pause excessive n'est tolérée).</p>
+
+    <label for="jours_requis_mois">Jours travaillés requis dans le mois</label>
+    <input type="number" min="0" id="jours_requis_mois" name="jours_requis_mois"
+           value="{{ regle.jours_requis_mois }}" required>
+
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+  </form>
+{% endblock %}

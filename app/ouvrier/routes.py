@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import Chantier, Pointage
 from app.pointage import etat_actuel, heures_travaillees_mois
+from app.prime import statut_prime_mois
 
 ouvrier_bp = Blueprint("ouvrier", __name__, url_prefix="/ouvrier")
 
@@ -25,6 +26,7 @@ def home():
     heures_mois, jours_mois = heures_travaillees_mois(
         current_user.id, aujourdhui.year, aujourdhui.month
     )
+    prime = statut_prime_mois(current_user.id, aujourdhui.year, aujourdhui.month)
 
     return render_template(
         "ouvrier/home.html",
@@ -33,6 +35,7 @@ def home():
         chantiers_du_jour=chantiers_du_jour,
         heures_mois=heures_mois,
         jours_mois=jours_mois,
+        prime=prime,
     )
 
 

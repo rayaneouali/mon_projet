@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Modifier un chantier{% endblock %}
+
+{% block content %}
+  <h1>Modifier « {{ chantier.nom }} »</h1>
+
+  <form method="post" class="form">
+    <label for="nom">Nom</label>
+    <input type="text" id="nom" name="nom" value="{{ chantier.nom }}" required>
+
+    <label for="adresse">Adresse</label>
+    <input type="text" id="adresse" name="adresse" value="{{ chantier.adresse or '' }}">
+
+    <label for="date">Date</label>
+    <input type="date" id="date" name="date" value="{{ chantier.date.isoformat() }}" required>
+
+    <label for="horaire_debut">Horaire prévu — début</label>
+    <input type="time" id="horaire_debut" name="horaire_debut"
+           value="{{ chantier.horaire_prevu_debut.strftime('%H:%M') if chantier.horaire_prevu_debut else '' }}">
+
+    <label for="horaire_fin">Horaire prévu — fin</label>
+    <input type="time" id="horaire_fin" name="horaire_fin"
+           value="{{ chantier.horaire_prevu_fin.strftime('%H:%M') if chantier.horaire_prevu_fin else '' }}">
+
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+  </form>
+
+  <p><a href="{{ url_for('admin.chantiers') }}">&larr; Retour à la liste</a></p>
+{% endblock %}

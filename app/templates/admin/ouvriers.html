@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Ouvriers{% endblock %}
+
+{% block content %}
+  <h1>Ouvriers</h1>
+
+  <section class="card">
+    <h2>Nouveau compte</h2>
+    <form method="post" class="form">
+      <label for="nom">Nom</label>
+      <input type="text" id="nom" name="nom" required>
+
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required>
+
+      <label for="password">Mot de passe initial</label>
+      <input type="text" id="password" name="password" required>
+      <p class="hint">Communique ces identifiants à l'ouvrier de vive voix. Pas d'envoi automatique en V1.</p>
+
+      <button type="submit" class="btn btn-primary">Créer le compte</button>
+    </form>
+  </section>
+
+  <table class="table">
+    <thead>
+      <tr><th>Nom</th><th>Email</th><th>Statut</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for o in ouvriers %}
+        <tr>
+          <td>{{ o.nom }}</td>
+          <td>{{ o.email }}</td>
+          <td>
+            {% if o.actif %}<span class="badge badge-ok">Actif</span>
+            {% else %}<span class="badge badge-muted">Désactivé</span>{% endif %}
+          </td>
+          <td>
+            <form method="post" action="{{ url_for('admin.ouvrier_toggle', user_id=o.id) }}">
+              <button type="submit" class="btn-link">{{ 'Désactiver' if o.actif else 'Réactiver' }}</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">Aucun ouvrier pour l'instant.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Chantiers{% endblock %}
+
+{% block content %}
+  <h1>Chantiers</h1>
+
+  <section class="card">
+    <h2>Nouveau chantier</h2>
+    <form method="post" class="form">
+      <label for="nom">Nom</label>
+      <input type="text" id="nom" name="nom" required>
+
+      <label for="adresse">Adresse</label>
+      <input type="text" id="adresse" name="adresse">
+
+      <label for="date">Date</label>
+      <input type="date" id="date" name="date" required>
+
+      <label for="horaire_debut">Horaire prévu — début</label>
+      <input type="time" id="horaire_debut" name="horaire_debut">
+
+      <label for="horaire_fin">Horaire prévu — fin</label>
+      <input type="time" id="horaire_fin" name="horaire_fin">
+
+      <button type="submit" class="btn btn-primary">Créer le chantier</button>
+    </form>
+  </section>
+
+  <table class="table">
+    <thead>
+      <tr><th>Nom</th><th>Adresse</th><th>Date</th><th>Horaires prévus</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for c in chantiers %}
+        <tr>
+          <td>{{ c.nom }}</td>
+          <td>{{ c.adresse or '—' }}</td>
+          <td>{{ c.date.strftime('%d/%m/%Y') }}</td>
+          <td>
+            {% if c.horaire_prevu_debut and c.horaire_prevu_fin %}
+              {{ c.horaire_prevu_debut.strftime('%H:%M') }} – {{ c.horaire_prevu_fin.strftime('%H:%M') }}
+            {% else %}—{% endif %}
+          </td>
+          <td><a href="{{ url_for('admin.chantier_edit', chantier_id=c.id) }}">Modifier</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">Aucun chantier pour l'instant.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

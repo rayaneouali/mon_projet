@@ -33,9 +33,116 @@ body {
 }
 
 .container {
-  max-width: 480px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 1.5rem 1.25rem;
+}
+
+.admin-nav {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1.25rem;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.admin-nav a {
+  color: #1f2430;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.admin-nav a:hover {
+  text-decoration: underline;
+}
+
+.filtre-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filtre-form label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.filtre-form select,
+.filtre-form input {
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.nav-mois {
+  margin-bottom: 1rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid #eee;
+}
+
+.table th {
+  background: #f4f5f7;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.badge-ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge-ko {
+  background: #fde2e2;
+  color: #a11;
+}
+
+.badge-muted {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.ecarts {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
 }
 
 .form {

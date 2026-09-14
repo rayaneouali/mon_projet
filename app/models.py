@@ -76,6 +76,7 @@ class ReglePrime(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     tolerance_retard_min = db.Column(db.Integer, nullable=False, default=10)
+    nb_retards_autorises = db.Column(db.Integer, nullable=False, default=0)
     duree_pause_max_min = db.Column(db.Integer, nullable=False, default=45)
     jours_requis_mois = db.Column(db.Integer, nullable=False, default=20)
 

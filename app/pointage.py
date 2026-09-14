@@ -28,9 +28,10 @@ def etat_actuel(user_id):
     return "sur_chantier", dernier.chantier
 
 
-def heures_travaillees_mois(user_id, annee, mois):
+def heures_travaillees_mois(user_id, annee, mois, chantier_id=None):
     """Calcule le nombre d'heures travaillées et de jours travaillés sur un
-    mois donné, pauses déduites.
+    mois donné, pauses déduites. Si chantier_id est fourni, ne compte que
+    les heures faites sur ce chantier précis.
 
     Principe : on parcourt les pointages du mois, du plus ancien au plus
     récent. "arrivee" ou "reprise" ouvre un segment de travail ; "pause" ou
@@ -39,12 +40,13 @@ def heures_travaillees_mois(user_id, annee, mois):
     debut_mois = datetime(annee, mois, 1)
     fin_mois = datetime(annee + 1, 1, 1) if mois == 12 else datetime(annee, mois + 1, 1)
 
-    pointages = (
-        Pointage.query.filter_by(user_id=user_id)
-        .filter(Pointage.timestamp >= debut_mois, Pointage.timestamp < fin_mois)
-        .order_by(Pointage.timestamp.asc())
-        .all()
+    query = Pointage.query.filter_by(user_id=user_id).filter(
+        Pointage.timestamp >= debut_mois, Pointage.timestamp < fin_mois
     )
+    if chantier_id:
+        query = query.filter_by(chantier_id=chantier_id)
+
+    pointages = query.order_by(Pointage.timestamp.asc()).all()
 
     total = timedelta()
     jours_travailles = set()

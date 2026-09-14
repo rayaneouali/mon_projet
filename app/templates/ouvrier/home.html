@@ -42,6 +42,22 @@
   <section class="card">
     <h2>Mon mois en cours</h2>
     <p>{{ jours_mois }} jour(s) travaillé(s) — {{ heures_mois }} heure(s) au total</p>
-    <p class="hint">Le statut de la prime d'assiduité sera affiché ici à l'étape 4.</p>
+
+    {% if prime.acquise %}
+      <p><span class="badge badge-ok">Prime d'assiduité acquise ce mois-ci</span></p>
+    {% else %}
+      <p><span class="badge badge-ko">Prime d'assiduité non acquise ce mois-ci</span></p>
+      <ul class="ecarts">
+        {% if not prime.ok_ponctualite %}
+          <li>{{ prime.nb_retards }} retard(s) enregistré(s), {{ prime.retards_autorises }} toléré(s) max.</li>
+        {% endif %}
+        {% if not prime.ok_pauses %}
+          <li>{{ prime.nb_pauses_excessives }} pause(s) trop longue(s) (plus de {{ prime.duree_pause_max_min }} min).</li>
+        {% endif %}
+        {% if not prime.ok_regularite %}
+          <li>{{ prime.jours_travailles }} jour(s) travaillé(s), {{ prime.jours_requis }} requis.</li>
+        {% endif %}
+      </ul>
+    {% endif %}
   </section>
 {% endblock %}
