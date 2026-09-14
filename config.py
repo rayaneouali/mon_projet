@@ -2,6 +2,11 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+# Le dossier "instance" contient la base de données SQLite. On le crée s'il
+# n'existe pas encore, pour ne pas avoir à y penser lors d'un premier
+# déploiement sur un nouvel hébergeur.
+os.makedirs(os.path.join(BASE_DIR, "instance"), exist_ok=True)
+
 
 class Config:
     # Clé utilisée par Flask pour sécuriser les sessions (cookies de connexion).

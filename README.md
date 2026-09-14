@@ -44,6 +44,8 @@ Puis ouvrir http://127.0.0.1:5000 dans le navigateur.
 5. Chaque ouvrier pointe depuis son téléphone (une fois le site déployé en ligne).
 6. Le **tableau de bord** centralise heures et statut de prime, avec un export CSV pour la paie.
 
-## Prochaine étape possible
+## Mise en ligne
 
-Le site tourne aujourd'hui uniquement en local. Pour que les ouvriers pointent réellement depuis leur téléphone, il faudra le déployer sur un hébergeur (ex. Render, Railway — gratuits pour ce volume d'usage). Pas encore fait, à prévoir quand le projet sera validé.
+- [x] Étape 5 — Guide de déploiement (PythonAnywhere, gratuit) : voir [DEPLOY.md](DEPLOY.md)
+
+Le déploiement effectif se fait avec ton propre compte PythonAnywhere (gratuit, sans carte bancaire) — suis le guide pas à pas dans `DEPLOY.md`.
