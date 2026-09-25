@@ -1,5 +1,7 @@
 """Application settings, read from environment variables (or a local .env file)."""
 
+from pathlib import Path
+
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -14,9 +16,11 @@ class Settings(BaseSettings):
 
     # SecretStr hides the value when printed or logged: "**********".
     anthropic_api_key: SecretStr | None = None
-    anthropic_model: str = "claude-sonnet-5"
+    anthropic_model: str = "claude-opus-5"
 
     user_signature: str = "Rayane Ouali"
+    contacts_file: Path = Path("data/fake_contacts.json")
+    send_delay_seconds: int = 30
 
 
 def get_settings() -> Settings:
