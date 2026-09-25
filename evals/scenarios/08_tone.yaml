@@ -1,0 +1,20 @@
+# Vous by default, tu when asked.
+- id: tutoiement_requested
+  category: tone
+  description: The user asks to use 'tu'.
+  turns:
+    - user: "Envoie un mail à Lucas Bernard, tutoie-le, pour lui dire de passer récupérer les clés du chantier à 7h30."
+      expect:
+        state: awaiting_validation
+        tone: tu
+        body_contains: ["7h30|7 h 30", "cles"]
+
+- id: vouvoiement_default
+  category: tone
+  description: Formal tone by default with a banker.
+  turns:
+    - user: "Mail à Isabelle Moreau pour demander un rendez-vous pour parler du prêt pour le camion."
+      expect:
+        state: awaiting_validation
+        tone: vous
+        body_contains: ["vous", "pret"]

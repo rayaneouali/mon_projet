@@ -1,0 +1,59 @@
+# Complete requests: everything is given in the first message.
+- id: simple_full_request_and_send
+  category: simple
+  description: Recipient, subject and content in one message, then send.
+  turns:
+    - user: "Envoie un mail à Sophie Garnier, objet factures de septembre, pour lui dire que je lui envoie les factures de septembre demain."
+      expect:
+        state: awaiting_validation
+        reply_kind: preview
+        recipient_email: s.garnier@comptable-garnier.fr
+        subject_contains: ["facture"]
+        body_contains: ["septembre", "demain"]
+        tone: vous
+    - action: send
+      expect: {state: pending_send, reply_kind: sending}
+    - wait: 31
+      expect: {state: sent, reply_kind: sent}
+
+- id: simple_supplier_order
+  category: simple
+  description: Order with quantities, day and place that must all appear.
+  turns:
+    - user: "Mail à Marc Rousseau, objet commande de ciment. Je veux commander 40 sacs de ciment pour jeudi, livraison sur le chantier de Villeurbanne."
+      expect:
+        state: awaiting_validation
+        recipient_email: marc.rousseau@rousseau-materiaux.fr
+        body_contains: ["40", "ciment", "jeudi", "villeurbanne"]
+
+- id: simple_no_subject_given
+  category: simple
+  description: No subject given, the agent writes one itself.
+  turns:
+    - user: "Écris à Thomas Petit que l'intervention électrique est décalée à mardi prochain 8h."
+      expect:
+        state: awaiting_validation
+        recipient_email: thomas.petit@petit-elec.fr
+        body_contains: ["mardi", "8"]
+
+- id: simple_cancel_at_preview
+  category: simple
+  description: The user cancels with the button on the preview.
+  turns:
+    - user: "Envoie un mail à Nadia Haddad pour lui dire que le devis est prêt."
+      expect: {state: awaiting_validation, recipient_email: nadia.haddad@orange.fr}
+    - action: cancel
+      expect: {state: cancelled, reply_kind: cancelled}
+
+- id: simple_cancel_during_delay
+  category: simple
+  description: The user cancels during the 30 second window.
+  turns:
+    - user: "Envoie un mail à François Lemaire pour lui dire que je passe signer le bail lundi à 14h."
+      expect: {state: awaiting_validation, body_contains: ["lundi", "14"]}
+    - action: send
+      expect: {state: pending_send}
+    - action: cancel
+      expect: {state: cancelled}
+    - wait: 60
+      expect: {state: cancelled}

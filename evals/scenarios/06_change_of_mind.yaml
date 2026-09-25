@@ -1,0 +1,33 @@
+# The user changes their mind.
+- id: change_recipient_while_collecting
+  category: change_of_mind
+  description: New recipient before the draft is written.
+  turns:
+    - user: "Envoie un mail à Thomas Petit."
+      expect: {state: collecting, reply_kind: ask_intent}
+    - user: "Non en fait c'est pour Marc Rousseau, pour lui demander le prix des tuiles."
+      expect:
+        state: awaiting_validation
+        recipient_email: marc.rousseau@rousseau-materiaux.fr
+        body_contains: ["tuile"]
+
+- id: change_recipient_at_preview
+  category: change_of_mind
+  description: New recipient after seeing the preview.
+  turns:
+    - user: "Envoie un mail à Sophie Garnier pour lui demander un rendez-vous pour le bilan annuel."
+      expect: {state: awaiting_validation, recipient_email: s.garnier@comptable-garnier.fr}
+    - user: "Finalement envoie-le plutôt à Isabelle Moreau."
+      expect:
+        state: awaiting_validation
+        recipient_email: i.moreau@banque-populaire.fr
+        body_contains: ["rendez-vous"]
+
+- id: cancel_by_text
+  category: change_of_mind
+  description: The user abandons in words.
+  turns:
+    - user: "Envoie un mail à Lucas Bernard."
+      expect: {state: collecting}
+    - user: "Laisse tomber, annule."
+      expect: {state: cancelled, reply_kind: cancelled}

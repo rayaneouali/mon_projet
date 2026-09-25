@@ -16,6 +16,30 @@ cp .env.example .env     # puis remplis les valeurs dans .env
 
 `uv` télécharge tout seul la bonne version de Python (3.12, voir `.python-version`).
 
+## Essayer l'agent dans le terminal (phase 1)
+
+Il faut une clé API Anthropic dans `.env` (`ANTHROPIC_API_KEY=...`, à créer sur
+https://console.anthropic.com). Les contacts sont factices (`data/fake_contacts.json`)
+et l'envoi est simulé : aucun vrai mail ne part.
+
+```bash
+uv run voxmail
+```
+
+Exemple : « Envoie un mail à Jean pour lui dire que la réunion est avancée à 9h ».
+Sur l'aperçu, tapez `1` (Envoyer), `2` (Modifier) ou `3` (Annuler).
+
+## Évaluer l'agent
+
+`evals/scenarios/*.yaml` décrit 30 conversations réalistes et le comportement attendu.
+Ce script les rejoue avec le vrai Claude et affiche le taux de réussite (objectif ≥ 90 %).
+Il coûte un peu d'argent (quelques appels API par scénario).
+
+```bash
+uv run python evals/run_evals.py                  # tous les scénarios
+uv run python evals/run_evals.py --only homonyms  # une catégorie ou un id
+```
+
 ## Commandes utiles
 
 ```bash
@@ -31,8 +55,21 @@ uv run ruff format .     # formater le code automatiquement
 ```
 mon_projet/
 ├── src/voxmail/          # le code de l'application
-│   ├── __init__.py       # fait de ce dossier un package Python
-│   └── config.py         # lecture de la configuration (.env)
+│   ├── config.py         # lecture de la configuration (.env)
+│   ├── domain/           # les règles, sans aucun service externe
+│   │   ├── state_machine.py  # états de la conversation et passages autorisés
+│   │   ├── contacts.py       # retrouver le bon destinataire
+│   │   └── models.py         # la « fiche » d'une conversation
+│   ├── agent/            # le cerveau : décide quoi faire à chaque message
+│   │   ├── agent.py
+│   │   └── prompts.py    # les instructions données à Claude
+│   ├── llm/              # parler à Claude (et un faux Claude pour les tests)
+│   ├── contacts/         # d'où viennent les contacts (fichier JSON, Google plus tard)
+│   ├── mail/             # comment part le mail (simulé, Gmail plus tard)
+│   ├── evaluation.py     # rejoue les scénarios YAML
+│   └── cli.py            # l'interface terminal
+├── data/fake_contacts.json  # carnet d'adresses factice
+├── evals/                # scénarios d'évaluation + script qui les lance
 ├── tests/                # les tests automatiques (pytest)
 ├── .github/workflows/    # la CI : tests + lint à chaque push
 ├── pyproject.toml        # description du projet, dépendances, réglages ruff/pytest
@@ -42,5 +79,3 @@ mon_projet/
 ├── CLAUDE.md             # contexte du projet pour Claude
 └── README.md
 ```
-
-D'autres dossiers (agent, contacts, mail…) apparaîtront au fil des phases.

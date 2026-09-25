@@ -1,0 +1,64 @@
+# Missing information: the agent must ask, not guess.
+- id: missing_recipient
+  category: missing_info
+  description: No recipient in the first message.
+  turns:
+    - user: "Je veux envoyer un mail pour annoncer que le chantier de la rue Paul Bert est terminé."
+      expect: {state: collecting, reply_kind: ask_recipient}
+    - user: "À François Lemaire."
+      expect:
+        state: awaiting_validation
+        recipient_email: f.lemaire@lemaire-immo.fr
+        body_contains: ["termin", "paul bert"]
+
+- id: missing_intent
+  category: missing_info
+  description: Only the recipient is given.
+  turns:
+    - user: "Envoie un mail à Hélène Lefèvre."
+      expect: {state: collecting, reply_kind: ask_intent}
+    - user: "Dis-lui que le dossier de permis de construire est complet et que je le dépose lundi."
+      expect:
+        state: awaiting_validation
+        recipient_email: helene.lefevre@mairie-lyon.fr
+        body_contains: ["permis", "lundi"]
+
+- id: missing_everything
+  category: missing_info
+  description: Nothing useful at first, the agent asks step by step.
+  turns:
+    - user: "Je dois envoyer un mail."
+      expect: {state: collecting, reply_kind: ask_recipient}
+    - user: "À Thomas Petit."
+      expect: {state: collecting, reply_kind: ask_intent}
+    - user: "Pour lui demander un devis pour la rénovation électrique d'un appartement de 60 m2."
+      expect:
+        state: awaiting_validation
+        recipient_email: thomas.petit@petit-elec.fr
+        body_contains: ["devis", "60"]
+
+- id: unknown_contact_then_address
+  category: missing_info
+  description: Unknown person, the agent asks for the address then its confirmation.
+  turns:
+    - user: "Envoie un mail à Paul Girard pour lui confirmer le rendez-vous de vendredi 10h."
+      expect: {state: collecting, reply_kind: ask_email}
+    - user: "paul.girard@gmail.com"
+      expect: {state: collecting, reply_kind: confirm_email, pending_email: paul.girard@gmail.com}
+    - user: "Oui c'est bien ça."
+      expect:
+        state: awaiting_validation
+        recipient_email: paul.girard@gmail.com
+        body_contains: ["vendredi", "10"]
+
+- id: vague_intent
+  category: missing_info
+  description: "'Prévenir' without saying what: the agent asks what to say."
+  turns:
+    - user: "Tu peux envoyer un mail à Nadia pour la prévenir ?"
+      expect: {state: collecting, reply_kind: ask_intent}
+    - user: "Que je serai en retard de 30 minutes demain matin."
+      expect:
+        state: awaiting_validation
+        recipient_email: nadia.haddad@orange.fr
+        body_contains: ["30", "retard"]

@@ -1,0 +1,39 @@
+# Voice transcription mistakes.
+- id: typo_dupond
+  category: transcription
+  description: "'Dupond' instead of 'Dupont'."
+  turns:
+    - user: "Envoie un mail à Jean Dupond pour confirmer la livraison des parpaings mercredi."
+      expect:
+        state: awaiting_validation
+        recipient_email: jean.dupont@btp-dupont.fr
+        body_contains: ["parpaing", "mercredi"]
+
+- id: typo_lefebvre_and_spelling
+  category: transcription
+  description: Misspelled name and many spelling mistakes.
+  turns:
+    - user: "mail a helene lefebvre objet reunion dis lui ke je peu pas venir a la reunion de jeudi"
+      expect:
+        state: awaiting_validation
+        recipient_email: helene.lefevre@mairie-lyon.fr
+        body_contains: ["jeudi"]
+
+- id: garbled_message
+  category: transcription
+  description: Incomprehensible message, the agent must not guess.
+  turns:
+    - user: "euh envoie le truc là à machin pour le… enfin tu vois pour demain quoi"
+      expect: {state: collecting, reply_kind: [clarify, ask_recipient, ask_intent]}
+
+- id: hesitant_voice_message
+  category: transcription
+  description: Hesitant message, understood after the user clarifies.
+  turns:
+    - user: "mail euh nadia haddad euh retard euh demain chantier euh trente minute"
+      expect: {}
+    - user: "Oui c'est ça : je serai en retard de 30 minutes demain au chantier."
+      expect:
+        state: awaiting_validation
+        recipient_email: nadia.haddad@orange.fr
+        body_contains: ["30|trente"]

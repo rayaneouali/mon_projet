@@ -1,0 +1,39 @@
+# Several possible recipients: the agent must ask which one.
+- id: homonym_pick_by_number
+  category: homonyms
+  description: Two Jean, the user answers with a number.
+  turns:
+    - user: "Envoie un mail à Jean pour lui dire que la réunion de chantier est avancée à 9h."
+      expect: {state: collecting, reply_kind: ask_choice, choices_count: 2}
+    - user: "1"
+      expect: {state: awaiting_validation, recipient_email: jean.dupont@btp-dupont.fr, body_contains: ["9"]}
+
+- id: homonym_pick_by_name
+  category: homonyms
+  description: Two Jean, the user answers with the full name.
+  turns:
+    - user: "Envoie un mail à Jean pour lui dire que la réunion de chantier est avancée à 9h."
+      expect: {state: collecting, reply_kind: ask_choice}
+    - user: "Jean Martin"
+      expect: {state: awaiting_validation, recipient_email: jmartin@gmail.com}
+
+- id: homonym_pick_by_description
+  category: homonyms
+  description: Two Jean, the user describes the right one.
+  turns:
+    - user: "Écris à Jean que les plans modifiés sont prêts."
+      expect: {state: collecting, reply_kind: ask_choice}
+    - user: "Celui de chez BTP Dupont."
+      expect: {state: awaiting_validation, recipient_email: jean.dupont@btp-dupont.fr}
+
+- id: several_addresses
+  category: homonyms
+  description: One contact with two addresses, the user picks the professional one.
+  turns:
+    - user: "Mail à Karim pour lui demander s'il est dispo pour une fuite rue Garibaldi demain."
+      expect: {state: collecting, reply_kind: ask_choice, choices_count: 2}
+    - user: "L'adresse pro."
+      expect:
+        state: awaiting_validation
+        recipient_email: karim@benali-plomberie.fr
+        body_contains: ["fuite", "garibaldi"]

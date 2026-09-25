@@ -1,0 +1,39 @@
+# Addresses given or dictated: new ones must always be confirmed.
+- id: dictated_address
+  category: addresses
+  description: Address dictated with 'arobase', 'tiret', 'point'.
+  turns:
+    - user: "Envoie un mail à contact arobase maconnerie tiret leroy point fr pour demander un devis pour une dalle béton de 30 m2."
+      expect: {state: collecting, reply_kind: confirm_email, pending_email: contact@maconnerie-leroy.fr}
+    - user: "Oui."
+      expect:
+        state: awaiting_validation
+        recipient_email: contact@maconnerie-leroy.fr
+        body_contains: ["devis", "30"]
+
+- id: spelled_address
+  category: addresses
+  description: Address spelled letter by letter.
+  turns:
+    - user: "Écris à j point r o y e r arobase gmail point com pour lui rappeler que la facture 2024-118 est à régler avant la fin du mois."
+      expect: {state: collecting, reply_kind: confirm_email, pending_email: j.royer@gmail.com}
+    - user: "Oui c'est ça."
+      expect: {state: awaiting_validation, recipient_email: j.royer@gmail.com, body_contains: ["2024-118"]}
+
+- id: address_corrected
+  category: addresses
+  description: The user says no and gives the right address, which is confirmed again.
+  turns:
+    - user: "Envoie à martin point b arobase free point fr que les plans sont prêts."
+      expect: {state: collecting, reply_kind: confirm_email, pending_email: martin.b@free.fr}
+    - user: "Non, c'est martin point d arobase free point fr."
+      expect: {state: collecting, reply_kind: confirm_email, pending_email: martin.d@free.fr}
+    - user: "Oui."
+      expect: {state: awaiting_validation, recipient_email: martin.d@free.fr}
+
+- id: known_address_typed
+  category: addresses
+  description: An address already in the contacts needs no confirmation.
+  turns:
+    - user: "Envoie à jmartin@gmail.com que les plans sont prêts."
+      expect: {state: awaiting_validation, reply_kind: preview, recipient_email: jmartin@gmail.com}

@@ -63,6 +63,19 @@ pytest, ruff, type hints partout, GitHub Actions · AWS (UE) · Sentry.
 - Le cœur (états, règles) ne dépend d'aucun service externe. LLM, contacts, envoi de mail et
   transcription sont derrière de petites interfaces, simulées dans les tests unitaires.
 - Configuration uniquement via `voxmail.config.Settings` (variables d'environnement / `.env`).
+- Un seul chemin vers l'envoi : `Agent.handle_action(Action.SEND)` depuis AWAITING_VALIDATION,
+  puis `Agent.process_due_send` après le délai. Le texte libre ne déclenche jamais d'envoi.
+- Tout changement d'état passe par `Conversation.move_to` → `transition()`.
+- L'heure est injectée (`clock`) pour que les tests contrôlent le temps.
+
+## Architecture (phase 1)
+- `domain/` : `state_machine.py`, `contacts.py` (résolution sans LLM), `models.py`.
+- `agent/agent.py` : le LLM extrait (`Extraction`) et rédige (`EmailDraft`) ; le code décide
+  de la question suivante et ajoute la signature. Questions posées par du code (texte fixe).
+- `llm/` : interface `LLMClient.generate(system, user, output_type)`, `AnthropicLLM`
+  (`messages.parse` + Pydantic), `FakeLLM` pour les tests.
+- `contacts/`, `mail/` : interfaces + implémentations factices (Google/Gmail en phase 2).
+- `evaluation.py` + `evals/scenarios/*.yaml` + `evals/run_evals.py`.
 
 ## Commandes
 ```bash
@@ -70,11 +83,13 @@ uv sync                    # installer les dépendances
 uv run pytest              # tests
 uv run ruff check .        # lint
 uv run ruff format .       # formatage
+uv run voxmail             # agent dans le terminal (clé Anthropic requise)
+uv run python evals/run_evals.py   # évaluation contre le vrai LLM (payant)
 ```
 
 ## Plan
 - Phase 0 : initialisation. ✅
-- Phase 1 : cœur de l'agent en terminal (contacts factices, envoi simulé, machine à états, tests, 30 scénarios d'évaluation, objectif ≥ 90 %).
+- Phase 1 : ✅ code et tests faits ; évaluation réelle à lancer dès qu'une clé API est dispo. Cœur de l'agent en terminal (contacts factices, envoi simulé, machine à états, tests, 30 scénarios d'évaluation, objectif ≥ 90 %).
 - Phase 2 : PostgreSQL, OAuth Google, vrais contacts, vrai envoi, idempotence, délai de 30 s.
 - Phase 3 : WhatsApp (webhook, signatures, déduplication, boutons, vocaux, file + worker, onboarding).
 - Phase 4 : production AWS, Sentry, CI/CD, purge, documents RGPD, runbook.

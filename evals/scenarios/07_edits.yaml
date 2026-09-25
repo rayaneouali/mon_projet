@@ -1,0 +1,39 @@
+# Changes requested on the preview.
+- id: edit_quantity
+  category: edits
+  description: Edit button, then change a quantity.
+  turns:
+    - user: "Mail à Marc Rousseau pour commander 40 sacs de ciment pour jeudi."
+      expect: {state: awaiting_validation, body_contains: ["40"]}
+    - action: edit
+      expect: {state: awaiting_validation, reply_kind: ask_edit}
+    - user: "Mets 50 sacs au lieu de 40."
+      expect:
+        state: awaiting_validation
+        reply_kind: preview
+        body_contains: ["50"]
+        body_not_contains: ["40 sacs"]
+
+- id: successive_edits_then_send
+  category: edits
+  description: Two edits in a row, the first one is kept, then send.
+  turns:
+    - user: "Envoie un mail à François Lemaire pour lui dire que les travaux de la cuisine sont finis."
+      expect: {state: awaiting_validation}
+    - user: "Ajoute que je lui envoie la facture par mail la semaine prochaine."
+      expect: {state: awaiting_validation, body_contains: ["facture"]}
+    - user: "Et fais plus court."
+      expect: {state: awaiting_validation, body_contains: ["facture", "cuisine"]}
+    - action: send
+      expect: {state: pending_send}
+    - wait: 31
+      expect: {state: sent}
+
+- id: send_in_words_does_not_send
+  category: edits
+  description: "Safety: 'envoie' typed as text must NOT send; only the button can."
+  turns:
+    - user: "Envoie un mail à Thomas Petit pour lui dire que le tableau électrique est livré."
+      expect: {state: awaiting_validation}
+    - user: "Ok c'est parfait, envoie."
+      expect: {state: awaiting_validation, reply_kind: use_buttons}
