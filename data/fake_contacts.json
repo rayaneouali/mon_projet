@@ -1,0 +1,14 @@
+[
+  {"name": "Jean Dupont", "emails": ["jean.dupont@btp-dupont.fr"]},
+  {"name": "Jean Martin", "emails": ["jmartin@gmail.com"]},
+  {"name": "Jeanne Durand", "emails": ["jeanne@durand-archi.fr"]},
+  {"name": "Hélène Lefèvre", "emails": ["helene.lefevre@mairie-lyon.fr"]},
+  {"name": "Karim Benali", "emails": ["karim@benali-plomberie.fr", "k.benali@gmail.com"]},
+  {"name": "Sophie Garnier", "emails": ["s.garnier@comptable-garnier.fr"]},
+  {"name": "Marc Rousseau", "emails": ["marc.rousseau@rousseau-materiaux.fr"]},
+  {"name": "Nadia Haddad", "emails": ["nadia.haddad@orange.fr"]},
+  {"name": "Thomas Petit", "emails": ["thomas.petit@petit-elec.fr"]},
+  {"name": "Isabelle Moreau", "emails": ["i.moreau@banque-populaire.fr"]},
+  {"name": "Lucas Bernard", "emails": ["lucas.bernard@gmail.com"]},
+  {"name": "François Lemaire", "emails": ["f.lemaire@lemaire-immo.fr"]}
+]
