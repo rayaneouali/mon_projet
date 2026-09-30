@@ -9,6 +9,7 @@ dependencies = [
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
     "pyyaml>=6.0.3",
+    "rapidfuzz>=3.14.6",
 ]
 
 [project.scripts]
@@ -38,3 +39,5 @@ select = ["E", "F", "I", "UP", "B", "ANN"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Lets tests import shared test data such as tests/recipient_cases.py.
+pythonpath = ["tests"]

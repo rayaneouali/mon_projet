@@ -1,108 +1,85 @@
-"""Find the right recipient in the user's contacts, without any LLM.
-
-The result is always one of four cases (Found, Ambiguous, NotFound, NewAddress),
-so the agent knows exactly whether it can continue or must ask a question.
-"""
+"""Contacts of the user and text normalization. One Contact = one email address."""
 
 import re
 import unicodedata
 from dataclasses import dataclass
-from difflib import SequenceMatcher
-
-# Minimum similarity (0 to 1) for two names to be considered a match.
-MATCH_THRESHOLD = 0.8
+from datetime import datetime
 
 # Simple shape check: something@something.something, no spaces.
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
-
-@dataclass(frozen=True)
-class Contact:
-    name: str
-    emails: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class Candidate:
-    """One possible recipient: a contact and one of its email addresses."""
-
-    name: str
-    email: str
-
-
-@dataclass(frozen=True)
-class Found:
-    recipient: Candidate
-
-
-@dataclass(frozen=True)
-class Ambiguous:
-    candidates: tuple[Candidate, ...]
-
-
-@dataclass(frozen=True)
-class NotFound:
-    query: str
-
-
-@dataclass(frozen=True)
-class NewAddress:
-    """An email address never seen before: its spelling must be confirmed."""
-
-    email: str
-
-
-Resolution = Found | Ambiguous | NotFound | NewAddress
+# Consumer email providers: their domain says nothing about the company.
+PUBLIC_EMAIL_DOMAINS = frozenset(
+    {
+        "gmail.com",
+        "googlemail.com",
+        "hotmail.com",
+        "hotmail.fr",
+        "outlook.com",
+        "outlook.fr",
+        "live.com",
+        "live.fr",
+        "msn.com",
+        "yahoo.com",
+        "yahoo.fr",
+        "icloud.com",
+        "me.com",
+        "orange.fr",
+        "wanadoo.fr",
+        "free.fr",
+        "sfr.fr",
+        "neuf.fr",
+        "laposte.net",
+        "bbox.fr",
+        "aol.com",
+        "proton.me",
+        "protonmail.com",
+    }
+)
 
 
 def normalize(text: str) -> str:
-    """Lowercase, remove accents and extra spaces: ' Hélène  DUPONT ' -> 'helene dupont'."""
+    """Lowercase, no accents, hyphens/apostrophes/dots removed, single spaces.
+
+    'Jacques-Édouard  LEFÈVRE' -> 'jacques edouard lefevre'
+    """
     decomposed = unicodedata.normalize("NFKD", text)
     without_accents = "".join(c for c in decomposed if not unicodedata.combining(c))
-    return " ".join(without_accents.lower().split())
-
-
-def similarity(a: str, b: str) -> float:
-    return SequenceMatcher(None, a, b).ratio()
-
-
-def name_score(query: str, contact_name: str) -> float:
-    """How well `query` matches a contact name, from 0 to 1.
-
-    A one-word query ("Dupont", "Jean") is also compared to each part of the name.
-    """
-    query, name = normalize(query), normalize(contact_name)
-    scores = [similarity(query, name)]
-    if " " not in query:
-        scores += [similarity(query, part) for part in name.split()]
-    return max(scores)
+    lowered = without_accents.lower().replace("'", "").replace("’", "")
+    return " ".join(re.sub(r"[-_.]", " ", lowered).split())
 
 
 def is_email(text: str) -> bool:
     return EMAIL_PATTERN.match(text.strip()) is not None
 
 
-def resolve_recipient(query: str, contacts: list[Contact]) -> Resolution:
-    query = query.strip()
+def company_from_email(email: str) -> str | None:
+    """'j.bertin@mecalux.fr' -> 'mecalux'; None for gmail.com, orange.fr..."""
+    domain = email.rsplit("@", 1)[-1].lower()
+    if domain in PUBLIC_EMAIL_DOMAINS:
+        return None
+    name = domain.rsplit(".", 1)[0]  # drop the extension (.fr, .com...)
+    return normalize(name) or None
 
-    if is_email(query):
-        email = query.lower()
-        for contact in contacts:
-            if email in (e.lower() for e in contact.emails):
-                return Found(Candidate(contact.name, email))
-        return NewAddress(email)
 
-    scored = [(name_score(query, c.name), c) for c in contacts]
-    matches = [(score, c) for score, c in scored if score >= MATCH_THRESHOLD]
-    exact = [(score, c) for score, c in matches if score == 1.0]
-    if exact:
-        matches = exact
+@dataclass(frozen=True)
+class Contact:
+    email: str
+    first_name: str = ""
+    last_name: str = ""
+    company: str | None = None
+    interaction_count: int = 0
+    last_interaction_at: datetime | None = None
 
-    matches.sort(key=lambda pair: pair[0], reverse=True)
-    candidates = tuple(Candidate(c.name, email) for _, c in matches for email in c.emails)
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip()
 
-    if not candidates:
-        return NotFound(query)
-    if len(candidates) == 1:
-        return Found(candidates[0])
-    return Ambiguous(candidates)
+    @property
+    def display_name(self) -> str:
+        return self.full_name or self.email
+
+    @property
+    def effective_company(self) -> str | None:
+        """The company given in the contact, or else the one guessed from the domain."""
+        return self.company or company_from_email(self.email)
