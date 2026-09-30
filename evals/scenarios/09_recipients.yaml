@@ -1,0 +1,57 @@
+# Recipient search: hypotheses, companies, clues, "none of these".
+- id: first_name_and_company
+  category: recipients
+  description: Two Jacques at Mecalux, both proposed, the most frequent first.
+  turns:
+    - user: "Envoie un mail à Jacques de chez Mecalux pour lui demander la date de livraison des racks."
+      expect:
+        reply_kind: ask_choice
+        top_proposal: jacques.mauger@mecalux.fr
+        proposals_include: [j.bertin@mecalux.fr]
+    - choose: j.bertin@mecalux.fr
+      expect: {state: awaiting_validation, body_contains: ["rack"]}
+
+- id: badly_transcribed_last_name
+  category: recipients
+  description: "'Mojé' heard for 'Mauger'."
+  turns:
+    - user: "Écris à Jacques Mojé que je valide le devis des étagères."
+      expect: {reply_kind: ask_choice, top_proposal: jacques.mauger@mecalux.fr}
+
+- id: company_only
+  category: recipients
+  description: "'Le gars de chez Mecalux': the Mecalux contacts are proposed."
+  turns:
+    - user: "Envoie un mail au gars de chez Mecalux pour avoir un devis de rayonnages."
+      expect:
+        reply_kind: ask_choice
+        proposals_include: [jacques.mauger@mecalux.fr, j.bertin@mecalux.fr]
+
+- id: clue_only_accountant
+  category: recipients
+  description: "'Mon comptable' finds the accounting firm."
+  turns:
+    - user: "Envoie un mail à mon comptable pour lui demander où en est le bilan."
+      expect: {reply_kind: ask_choice, top_proposal: s.garnier@comptable-garnier.fr}
+
+- id: none_of_these_then_more_clues
+  category: recipients
+  description: The user rejects the list, gives the company, the right contact comes up.
+  turns:
+    - user: "Envoie un mail à Christophe pour lui demander quand il peut monter le mur."
+      expect:
+        reply_kind: ask_choice
+        proposals_include: [c.faure@faure-maconnerie.fr, christophe.fort@free.fr]
+    - user: "3"
+      expect: {reply_kind: ask_more_clues}
+    - user: "C'est le maçon, de chez Faure Maçonnerie."
+      expect: {reply_kind: ask_choice, top_proposal: c.faure@faure-maconnerie.fr}
+    - choose: c.faure@faure-maconnerie.fr
+      expect: {state: awaiting_validation, body_contains: ["mur"]}
+
+- id: hyphenated_first_name
+  category: recipients
+  description: Compound first name with accent.
+  turns:
+    - user: "Mail à Jacques-Édouard Lefebvre pour lui demander un rendez-vous chez le notaire."
+      expect: {reply_kind: ask_choice, top_proposal: je.lefebvre@notaires-lefebvre.fr}

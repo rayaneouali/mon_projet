@@ -35,7 +35,7 @@ def main() -> int:
 
     passed = 0
     for scenario in scenarios:
-        result = run_scenario(scenario, llm, contacts)
+        result = run_scenario(scenario, llm, contacts, settings.scoring())
         passed += result.passed
         print(f"{'✅' if result.passed else '❌'} [{scenario.category}] {scenario.id}")
         for failure in result.failures:

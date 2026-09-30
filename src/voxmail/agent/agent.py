@@ -13,19 +13,13 @@ from uuid import uuid4
 from voxmail.agent.prompts import (
     EXTRACTION_SYSTEM,
     WRITER_SYSTEM,
+    describe_hint,
     extraction_input,
     writer_input,
 )
 from voxmail.contacts.directory import ContactDirectory
-from voxmail.domain.contacts import (
-    Ambiguous,
-    Candidate,
-    Found,
-    NewAddress,
-    NotFound,
-    normalize,
-    resolve_recipient,
-)
+from voxmail.contacts.memory import ChoiceMemory, InMemoryChoiceMemory
+from voxmail.domain.contacts import Contact, is_email
 from voxmail.domain.models import (
     Action,
     AgentReply,
@@ -35,12 +29,23 @@ from voxmail.domain.models import (
     Extraction,
     ReplyKind,
 )
+from voxmail.domain.recipient_search import (
+    DEFAULT_SCORING,
+    RecipientHint,
+    ScoringConfig,
+    context_similarity,
+    name_similarity,
+    suggest_recipients,
+)
 from voxmail.domain.state_machine import ConversationState, is_expired, is_final
 from voxmail.llm.base import LLMClient, LLMError
 from voxmail.mail.sender import MailSender, MailSendError, OutgoingEmail
 
 State = ConversationState
 PREVIEW_ACTIONS = [Action.SEND, Action.EDIT, Action.CANCEL]
+# A new hint "is" the chosen recipient above these similarities (no reset needed).
+SAME_RECIPIENT_NAME = 0.85
+SAME_RECIPIENT_CONTEXT = 0.75
 
 
 def utc_now() -> datetime:
@@ -56,6 +61,8 @@ class Agent:
         signature: str,
         send_delay: timedelta = timedelta(seconds=30),
         clock: Callable[[], datetime] = utc_now,
+        memory: ChoiceMemory | None = None,
+        scoring: ScoringConfig = DEFAULT_SCORING,
     ) -> None:
         self.llm = llm
         self.contacts = contacts
@@ -63,6 +70,8 @@ class Agent:
         self.signature = signature
         self.send_delay = send_delay
         self.clock = clock  # injected so tests can control time
+        self.memory = memory if memory is not None else InMemoryChoiceMemory()
+        self.scoring = scoring
 
     # ---------- entry points ----------
 
@@ -83,8 +92,14 @@ class Agent:
                 [Action.CANCEL],
             )
 
+        # A plain number answering the list of contacts: a human choice, no LLM.
+        if conv.choices and text.strip().isdigit():
+            return self.handle_choice(conv, int(text.strip()))
+
         try:
-            extraction = self._extract(conv, text)
+            extraction = self.llm.generate(
+                EXTRACTION_SYSTEM, extraction_input(conv, text), Extraction
+            )
         except LLMError:
             return self._technical_error(conv)
 
@@ -124,6 +139,31 @@ class Agent:
             [Action.CANCEL],
         )
 
+    def handle_choice(self, conv: Conversation, number: int) -> AgentReply:
+        """The human picked a line of the contact list (1-based). The ONLY way to
+        select a contact from the address book: neither the LLM nor the score can."""
+        if expired := self.expire_if_needed(conv):
+            return expired
+        if not conv.choices:
+            return self._reply(conv, ReplyKind.ERROR, "Aucune liste de contacts en attente.")
+        if number == len(conv.choices) + 1:  # "Aucun de ceux-là"
+            conv.choices = []
+            conv.needs_more_clues = True
+            return self._ask_more_clues(conv, "D'accord.")
+        if not 1 <= number <= len(conv.choices):
+            return self._ask_choice(conv)
+
+        chosen = conv.choices[number - 1]
+        conv.recipient = chosen
+        conv.choices = []
+        if conv.recipient_hint:
+            for heard in conv.recipient_hint.heard_names:
+                self.memory.record(heard, chosen.email)
+        try:
+            return self._next_step(conv)
+        except LLMError:
+            return self._technical_error(conv)
+
     def process_due_send(self, conv: Conversation) -> AgentReply | None:
         """Send the email if its cancellation window is over. Safe to call many times."""
         now = self.clock()
@@ -161,13 +201,6 @@ class Agent:
         return f"{draft.body.rstrip()}\n\n{self.signature}"
 
     # ---------- steps ----------
-
-    def _extract(self, conv: Conversation, text: str) -> Extraction:
-        stripped = text.strip()
-        # A plain number answering a list of options needs no LLM.
-        if conv.choices and stripped.isdigit():
-            return Extraction(choice=int(stripped))
-        return self.llm.generate(EXTRACTION_SYSTEM, extraction_input(conv, text), Extraction)
 
     def _handle_collecting(self, conv: Conversation, extraction: Extraction) -> AgentReply:
         if conv.pending_extraction is not None:
@@ -210,23 +243,25 @@ class Agent:
 
     def _merge(self, conv: Conversation, e: Extraction) -> None:
         """Copy what the LLM understood into the conversation."""
-        same_query = conv.recipient_query and normalize(e.recipient or "") == normalize(
-            conv.recipient_query
-        )
-        if e.recipient and not same_query:
-            conv.recipient_query = e.recipient
+        hint = e.recipient
+        if hint and not hint.is_empty() and not self._is_current_recipient(conv, hint):
+            previous = conv.recipient_hint
+            if conv.recipient is None and previous is not None:
+                hint = _combine_hints(previous, hint)  # new clues for the same search
+            conv.recipient_hint = hint
             conv.recipient = None
             conv.choices = []
+            conv.needs_more_clues = False
             conv.unconfirmed_email = None
-        elif conv.choices and e.choice is not None and 1 <= e.choice <= len(conv.choices):
-            conv.recipient = conv.choices[e.choice - 1]
-            conv.choices = []
         elif conv.unconfirmed_email and e.confirmation is not None:
             if e.confirmation:
-                name = conv.recipient_name_hint or ""
-                conv.recipient = Candidate(name=name, email=conv.unconfirmed_email)
-            else:
-                conv.recipient_query = None
+                conv.recipient = _contact_for_new_address(
+                    conv.unconfirmed_email, conv.recipient_hint
+                )
+            elif conv.recipient_hint:
+                # Forget the rejected address, keep the other clues.
+                conv.recipient_hint = conv.recipient_hint.model_copy(update={"email": None})
+                conv.needs_more_clues = True
             conv.unconfirmed_email = None
 
         if e.subject:
@@ -236,53 +271,80 @@ class Agent:
         if e.tone:
             conv.tone = e.tone
 
+    def _is_current_recipient(self, conv: Conversation, hint: RecipientHint) -> bool:
+        """True if the hint just describes the recipient already chosen (no change)."""
+        chosen = conv.recipient
+        if chosen is None:
+            return False
+        if hint.email:
+            return hint.email.strip().lower() == chosen.email.lower()
+        if hint.heard_names:
+            return any(
+                name_similarity(name, chosen) >= SAME_RECIPIENT_NAME for name in hint.heard_names
+            )
+        return context_similarity(hint, chosen) >= SAME_RECIPIENT_CONTEXT
+
     def _next_step(self, conv: Conversation) -> AgentReply:
         """Deterministic decision: which question to ask, or write the draft."""
         if conv.recipient is None:
-            if question := self._resolve_recipient(conv):
-                return question
+            return self._ask_about_recipient(conv)
         if not conv.intent:
-            name = conv.recipient.name if conv.recipient and conv.recipient.name else "ce contact"
+            name = conv.recipient.display_name if conv.recipient else "ce contact"
             return self._reply(
                 conv, ReplyKind.ASK_INTENT, f"Que voulez-vous dire à {name} dans ce mail ?"
             )
         return self._write_draft(conv)
 
-    def _resolve_recipient(self, conv: Conversation) -> AgentReply | None:
-        """Set conv.recipient, or return the question to ask."""
+    def _ask_about_recipient(self, conv: Conversation) -> AgentReply:
+        """The question that leads the human to pick the recipient (never picked for them)."""
         if conv.choices:
             return self._ask_choice(conv)
         if conv.unconfirmed_email:
             return self._ask_confirm_email(conv)
-        if not conv.recipient_query:
+        hint = conv.recipient_hint
+        if conv.needs_more_clues:
+            return self._ask_more_clues(conv, "")
+        if hint is None or hint.is_empty():
             return self._reply(conv, ReplyKind.ASK_RECIPIENT, "À qui voulez-vous écrire ?")
 
-        match resolve_recipient(conv.recipient_query, self.contacts.list_contacts()):
-            case Found(recipient):
-                conv.recipient = recipient
-                return None
-            case Ambiguous(candidates):
-                conv.choices = list(candidates)
-                return self._ask_choice(conv)
-            case NotFound(query):
-                conv.recipient_name_hint = query
-                conv.recipient_query = None
-                return self._reply(
-                    conv,
-                    ReplyKind.ASK_EMAIL,
-                    f"Je ne trouve pas « {query} » dans vos contacts. "
-                    "Quelle est son adresse mail ?",
-                )
-            case NewAddress(email):
-                conv.unconfirmed_email = email
-                return self._ask_confirm_email(conv)
-        raise AssertionError("unreachable")
+        suggestions = suggest_recipients(
+            hint,
+            self.contacts.list_contacts(),
+            self.clock(),
+            self.scoring,
+            self.memory.counts_for(hint.heard_names),
+        )
+        if suggestions:
+            conv.choices = [s.contact for s in suggestions]
+            return self._ask_choice(conv)
+        if hint.email and is_email(hint.email):
+            conv.unconfirmed_email = hint.email.strip().lower()
+            return self._ask_confirm_email(conv)
+
+        conv.needs_more_clues = True
+        return self._ask_more_clues(
+            conv, f"J'ai compris : {describe_hint(hint)}. Je ne trouve personne dans vos contacts."
+        )
 
     def _ask_choice(self, conv: Conversation) -> AgentReply:
-        options = "\n".join(
-            f"{i}. {c.name} ({c.email})" for i, c in enumerate(conv.choices, start=1)
+        lines = [
+            f"{i}. {c.full_name} ({c.email})" if c.full_name else f"{i}. {c.email}"
+            for i, c in enumerate(conv.choices, start=1)
+        ]
+        lines.append(f"{len(conv.choices) + 1}. Aucun de ceux-là")
+        understood = describe_hint(conv.recipient_hint)
+        return self._reply(
+            conv,
+            ReplyKind.ASK_CHOICE,
+            f"J'ai compris : {understood}.\nÀ qui voulez-vous écrire ?\n" + "\n".join(lines),
         )
-        return self._reply(conv, ReplyKind.ASK_CHOICE, f"Lequel voulez-vous ?\n{options}")
+
+    def _ask_more_clues(self, conv: Conversation, intro: str) -> AgentReply:
+        question = (
+            "Pouvez-vous me donner son nom de famille, son entreprise, "
+            "ou directement son adresse mail ?"
+        )
+        return self._reply(conv, ReplyKind.ASK_MORE_CLUES, f"{intro} {question}".strip())
 
     def _ask_confirm_email(self, conv: Conversation) -> AgentReply:
         email = conv.unconfirmed_email or ""
@@ -307,8 +369,8 @@ class Agent:
     def _preview(self, conv: Conversation) -> str:
         assert conv.recipient and conv.draft
         to = conv.recipient.email
-        if conv.recipient.name:
-            to = f"{conv.recipient.name} <{to}>"
+        if conv.recipient.full_name:
+            to = f"{conv.recipient.full_name} <{to}>"
         return f"À : {to}\nObjet : {conv.draft.subject}\n\n{self.full_body(conv.draft)}"
 
     def _cancel(self, conv: Conversation) -> AgentReply:
@@ -329,3 +391,20 @@ class Agent:
     ) -> AgentReply:
         conv.last_agent_message = text
         return AgentReply(kind=kind, text=text, actions=actions or [])
+
+
+def _combine_hints(previous: RecipientHint, new: RecipientHint) -> RecipientHint:
+    """New clues complete the previous ones; what is repeated replaces the old value."""
+    return RecipientHint(
+        heard_names=new.heard_names or previous.heard_names,
+        company=new.company or previous.company,
+        other_clues=new.other_clues or previous.other_clues,
+        email=new.email or previous.email,
+    )
+
+
+def _contact_for_new_address(email: str, hint: RecipientHint | None) -> Contact:
+    """A confirmed address that is not in the contacts, named with what was heard."""
+    name = hint.heard_names[0] if hint and hint.heard_names else ""
+    first, _, last = name.partition(" ")
+    return Contact(email=email, first_name=first, last_name=last)

@@ -27,11 +27,12 @@ uv run voxmail
 ```
 
 Exemple : « Envoie un mail à Jean pour lui dire que la réunion est avancée à 9h ».
-Sur l'aperçu, tapez `1` (Envoyer), `2` (Modifier) ou `3` (Annuler).
+L'agent propose les contacts les plus proches : tapez le numéro du bon (c'est toujours
+vous qui choisissez). Sur l'aperçu, tapez `1` (Envoyer), `2` (Modifier) ou `3` (Annuler).
 
 ## Évaluer l'agent
 
-`evals/scenarios/*.yaml` décrit 30 conversations réalistes et le comportement attendu.
+`evals/scenarios/*.yaml` décrit 36 conversations réalistes et le comportement attendu.
 Ce script les rejoue avec le vrai Claude et affiche le taux de réussite (objectif ≥ 90 %).
 Il coûte un peu d'argent (quelques appels API par scénario).
 
@@ -58,13 +59,15 @@ mon_projet/
 │   ├── config.py         # lecture de la configuration (.env)
 │   ├── domain/           # les règles, sans aucun service externe
 │   │   ├── state_machine.py  # états de la conversation et passages autorisés
-│   │   ├── contacts.py       # retrouver le bon destinataire
+│   │   ├── contacts.py       # un contact, et la normalisation des noms
+│   │   ├── phonetic.py       # « Mauger », « Maugé », « Mojé » → même son
+│   │   ├── recipient_search.py  # classe les contacts les plus proches (score 0-100)
 │   │   └── models.py         # la « fiche » d'une conversation
 │   ├── agent/            # le cerveau : décide quoi faire à chaque message
 │   │   ├── agent.py
 │   │   └── prompts.py    # les instructions données à Claude
 │   ├── llm/              # parler à Claude (et un faux Claude pour les tests)
-│   ├── contacts/         # d'où viennent les contacts (fichier JSON, Google plus tard)
+│   ├── contacts/         # d'où viennent les contacts + mémoire des choix
 │   ├── mail/             # comment part le mail (simulé, Gmail plus tard)
 │   ├── evaluation.py     # rejoue les scénarios YAML
 │   └── cli.py            # l'interface terminal

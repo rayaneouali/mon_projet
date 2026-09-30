@@ -5,6 +5,8 @@ from pathlib import Path
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from voxmail.domain.recipient_search import ScoringConfig
+
 
 class Settings(BaseSettings):
     """All configuration lives here. Never hardcode a secret in the code."""
@@ -21,6 +23,22 @@ class Settings(BaseSettings):
     user_signature: str = "Rayane Ouali"
     contacts_file: Path = Path("data/fake_contacts.json")
     send_delay_seconds: int = 30
+
+    # Recipient suggestions: weights (name + context + habit = 1) and limits.
+    recipient_name_weight: float = 0.60
+    recipient_context_weight: float = 0.25
+    recipient_habit_weight: float = 0.15
+    recipient_min_score: float = 50.0
+    recipient_max_suggestions: int = 5
+
+    def scoring(self) -> ScoringConfig:
+        return ScoringConfig(
+            name_weight=self.recipient_name_weight,
+            context_weight=self.recipient_context_weight,
+            habit_weight=self.recipient_habit_weight,
+            min_score=self.recipient_min_score,
+            max_suggestions=self.recipient_max_suggestions,
+        )
 
 
 def get_settings() -> Settings:

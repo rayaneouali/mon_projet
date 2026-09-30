@@ -4,17 +4,19 @@ import pytest
 
 from voxmail.agent.agent import Agent
 from voxmail.contacts.directory import InMemoryContactDirectory
+from voxmail.contacts.memory import InMemoryChoiceMemory
 from voxmail.domain.contacts import Contact
 from voxmail.domain.models import Action, EmailDraft, Extraction, ReplyKind
+from voxmail.domain.recipient_search import RecipientHint as Hint
 from voxmail.domain.state_machine import ConversationState as State
 from voxmail.llm.base import LLMError
 from voxmail.llm.fake import FakeLLM
 from voxmail.mail.sender import FakeMailSender, MailSendError
 
 CONTACTS = [
-    Contact("Jean Dupont", ("jean.dupont@btp-dupont.fr",)),
-    Contact("Jean Martin", ("jmartin@gmail.com",)),
-    Contact("Sophie Garnier", ("s.garnier@comptable.fr",)),
+    Contact("jean.dupont@btp-dupont.fr", "Jean", "Dupont", interaction_count=5),
+    Contact("jmartin@gmail.com", "Jean", "Martin"),
+    Contact("s.garnier@comptable.fr", "Sophie", "Garnier"),
 ]
 DRAFT = EmailDraft(subject="Factures", body="Bonjour Madame Garnier,\n\nVoici les factures.")
 
@@ -35,7 +37,7 @@ class FailingSender:
         raise MailSendError("boom")
 
 
-def make_agent(responses, sender=None):
+def make_agent(responses, sender=None, memory=None):
     clock = Clock()
     agent = Agent(
         llm=FakeLLM(responses),
@@ -43,26 +45,183 @@ def make_agent(responses, sender=None):
         sender=sender or FakeMailSender(),
         signature="Rayane Ouali",
         clock=clock,
+        memory=memory,
     )
     return agent, clock
 
 
-def full_request():
-    return Extraction(recipient="Sophie Garnier", intent="Envoyer les factures")
+def sophie_request():
+    return Extraction(recipient=Hint(heard_names=["Sophie Garnier"]), intent="Envoyer les factures")
 
 
 def to_preview(responses=None, sender=None):
-    agent, clock = make_agent(responses or [full_request(), DRAFT], sender)
+    agent, clock = make_agent(responses or [sophie_request(), DRAFT], sender)
     conv = agent.start()
     reply = agent.handle_text(conv, "mail à Sophie pour les factures")
+    assert reply.kind == ReplyKind.ASK_CHOICE
+    reply = agent.handle_text(conv, "1")
     return agent, clock, conv, reply
+
+
+# ---------- choosing the recipient ----------
+
+
+def test_even_a_single_obvious_match_must_be_picked_by_the_human():
+    agent, _ = make_agent([sophie_request()])
+    conv = agent.start()
+    reply = agent.handle_text(conv, "mail à Sophie Garnier pour les factures")
+    assert reply.kind == ReplyKind.ASK_CHOICE
+    assert conv.recipient is None  # nothing selected automatically
+    assert "1. Sophie Garnier (s.garnier@comptable.fr)" in reply.text
+    assert "2. Aucun de ceux-là" in reply.text
+    assert "J'ai compris : « Sophie Garnier »" in reply.text
+
+
+def test_picking_by_number_needs_no_llm():
+    agent, _, conv, reply = to_preview()
+    assert reply.kind == ReplyKind.PREVIEW
+    assert conv.recipient.email == "s.garnier@comptable.fr"
+    assert len(agent.llm.calls) == 2  # extraction + writing, not for "1"
+
+
+def test_homonyms_are_listed_most_likely_first():
+    agent, _ = make_agent([Extraction(recipient=Hint(heard_names=["Jean"]), intent="Réunion à 9h")])
+    conv = agent.start()
+    reply = agent.handle_text(conv, "mail à Jean, réunion à 9h")
+    assert [c.email for c in conv.choices] == ["jean.dupont@btp-dupont.fr", "jmartin@gmail.com"]
+    assert "3. Aucun de ceux-là" in reply.text
+
+
+def test_choice_is_learned_and_ranks_higher_next_time():
+    memory = InMemoryChoiceMemory()
+    request = Extraction(recipient=Hint(heard_names=["Jean"]), intent="Réunion à 9h")
+    for _ in range(2):
+        agent, _ = make_agent([request, DRAFT], memory=memory)
+        conv = agent.start()
+        agent.handle_text(conv, "mail à Jean")
+        agent.handle_text(conv, str(1 + [c.email for c in conv.choices].index("jmartin@gmail.com")))
+
+    agent, _ = make_agent([request], memory=memory)
+    conv = agent.start()
+    agent.handle_text(conv, "mail à Jean")
+    assert conv.choices[0].email == "jmartin@gmail.com"
+    assert conv.recipient is None  # still only a suggestion
+
+
+def test_none_of_these_asks_for_more_clues_then_searches_again():
+    agent, _ = make_agent(
+        [
+            Extraction(recipient=Hint(heard_names=["Jean"]), intent="Plans prêts"),
+            Extraction(recipient=Hint(heard_names=["Martin"])),
+        ]
+    )
+    conv = agent.start()
+    agent.handle_text(conv, "mail à Jean")
+    reply = agent.handle_text(conv, "3")  # "Aucun de ceux-là"
+    assert reply.kind == ReplyKind.ASK_MORE_CLUES
+    reply = agent.handle_text(conv, "Martin")
+    assert reply.kind == ReplyKind.ASK_CHOICE
+    assert conv.choices[0].email == "jmartin@gmail.com"
+
+
+def test_words_instead_of_a_number_are_new_clues_not_a_choice():
+    agent, _ = make_agent(
+        [
+            Extraction(recipient=Hint(heard_names=["Jean"]), intent="Plans prêts"),
+            Extraction(recipient=Hint(heard_names=["Jean Martin"])),
+        ]
+    )
+    conv = agent.start()
+    agent.handle_text(conv, "mail à Jean")
+    reply = agent.handle_text(conv, "Jean Martin")
+    assert reply.kind == ReplyKind.ASK_CHOICE
+    assert conv.recipient is None
+    assert conv.choices[0].email == "jmartin@gmail.com"
+
+
+def test_out_of_range_number_asks_again():
+    agent, _ = make_agent([sophie_request()])
+    conv = agent.start()
+    agent.handle_text(conv, "mail à Sophie")
+    assert agent.handle_text(conv, "7").kind == ReplyKind.ASK_CHOICE
+    assert conv.recipient is None
+
+
+def test_nobody_found_asks_for_more_clues():
+    agent, _ = make_agent([Extraction(recipient=Hint(heard_names=["Zébulon"]), intent="rdv")])
+    conv = agent.start()
+    reply = agent.handle_text(conv, "mail à Zébulon")
+    assert reply.kind == ReplyKind.ASK_MORE_CLUES
+    assert "Je ne trouve personne" in reply.text
+
+
+def test_known_address_is_still_proposed_for_a_choice():
+    agent, _ = make_agent([Extraction(recipient=Hint(email="JMartin@gmail.com"), intent="Plans")])
+    conv = agent.start()
+    assert agent.handle_text(conv, "mail à jmartin@gmail.com").kind == ReplyKind.ASK_CHOICE
+    assert [c.email for c in conv.choices] == ["jmartin@gmail.com"]
+
+
+def test_new_address_must_be_confirmed_letter_by_letter():
+    agent, _ = make_agent(
+        [
+            Extraction(
+                recipient=Hint(heard_names=["Paul Girard"], email="paul@nouveau.fr"),
+                intent="Confirmer le rdv",
+            ),
+            Extraction(confirmation=True),
+            DRAFT,
+        ]
+    )
+    conv = agent.start()
+    reply = agent.handle_text(conv, "mail à Paul Girard, paul arobase nouveau point fr")
+    assert reply.kind == ReplyKind.CONFIRM_EMAIL
+    assert "p a u l @" in reply.text
+    assert conv.recipient is None
+    assert agent.handle_text(conv, "oui").kind == ReplyKind.PREVIEW
+    assert conv.recipient.email == "paul@nouveau.fr"
+    assert conv.recipient.full_name == "Paul Girard"
+
+
+def test_rejected_address_is_forgotten_and_the_corrected_one_confirmed():
+    agent, _ = make_agent(
+        [
+            Extraction(recipient=Hint(email="martin.b@free.fr"), intent="Plans prêts"),
+            Extraction(confirmation=False),
+            Extraction(recipient=Hint(email="martin.d@free.fr")),
+        ]
+    )
+    conv = agent.start()
+    agent.handle_text(conv, "mail à martin point b arobase free point fr")
+    assert agent.handle_text(conv, "non").kind == ReplyKind.ASK_MORE_CLUES
+    assert conv.recipient_hint.email is None
+    reply = agent.handle_text(conv, "martin point d arobase free point fr")
+    assert reply.kind == ReplyKind.CONFIRM_EMAIL
+    assert conv.unconfirmed_email == "martin.d@free.fr"
+
+
+def test_repeating_the_chosen_name_does_not_reset_the_choice():
+    agent, _ = make_agent(
+        [
+            Extraction(recipient=Hint(heard_names=["Sophie Garnier"])),
+            Extraction(recipient=Hint(heard_names=["Sophie"]), intent="Envoyer les factures"),
+            DRAFT,
+        ]
+    )
+    conv = agent.start()
+    agent.handle_text(conv, "mail à Sophie Garnier")
+    assert agent.handle_text(conv, "1").kind == ReplyKind.ASK_INTENT
+    assert agent.handle_text(conv, "dis à Sophie que...").kind == ReplyKind.PREVIEW
+
+
+# ---------- preview, edits, sending ----------
 
 
 def test_complete_request_gives_a_preview():
     _, _, conv, reply = to_preview()
     assert reply.kind == ReplyKind.PREVIEW
     assert conv.state == State.AWAITING_VALIDATION
-    assert "s.garnier@comptable.fr" in reply.text
+    assert "Sophie Garnier <s.garnier@comptable.fr>" in reply.text
     assert "Rayane Ouali" in reply.text  # signature added by code
     assert reply.actions == [Action.SEND, Action.EDIT, Action.CANCEL]
 
@@ -71,8 +230,7 @@ def test_send_waits_for_the_delay_then_sends_once():
     sender = FakeMailSender()
     agent, clock, conv, _ = to_preview(sender=sender)
 
-    reply = agent.handle_action(conv, Action.SEND)
-    assert reply.kind == ReplyKind.SENDING
+    assert agent.handle_action(conv, Action.SEND).kind == ReplyKind.SENDING
     assert conv.state == State.PENDING_SEND
 
     clock.advance(seconds=29)
@@ -81,9 +239,7 @@ def test_send_waits_for_the_delay_then_sends_once():
 
     clock.advance(seconds=1)
     assert agent.process_due_send(conv).kind == ReplyKind.SENT
-    assert conv.state == State.SENT
-    # Calling again must never send a second email.
-    assert agent.process_due_send(conv) is None
+    assert agent.process_due_send(conv) is None  # never a second email
     assert len(sender.sent) == 1
     email = next(iter(sender.sent.values()))
     assert email.to == "s.garnier@comptable.fr"
@@ -101,8 +257,7 @@ def test_cancel_during_delay_sends_nothing():
 
 
 def test_asking_to_send_in_words_never_sends():
-    responses = [full_request(), DRAFT, Extraction(wants_to_send=True)]
-    agent, _, conv, _ = to_preview(responses)
+    agent, _, conv, _ = to_preview([sophie_request(), DRAFT, Extraction(wants_to_send=True)])
     reply = agent.handle_text(conv, "c'est parfait envoie-le")
     assert reply.kind == ReplyKind.USE_BUTTONS
     assert conv.state == State.AWAITING_VALIDATION
@@ -127,76 +282,16 @@ def test_missing_recipient_then_missing_intent():
     agent, _ = make_agent(
         [
             Extraction(),
-            Extraction(recipient="Sophie Garnier"),
+            Extraction(recipient=Hint(heard_names=["Sophie Garnier"])),
             Extraction(intent="Envoyer les factures"),
             DRAFT,
         ]
     )
     conv = agent.start()
     assert agent.handle_text(conv, "je veux envoyer un mail").kind == ReplyKind.ASK_RECIPIENT
-    assert agent.handle_text(conv, "à Sophie Garnier").kind == ReplyKind.ASK_INTENT
+    assert agent.handle_text(conv, "à Sophie Garnier").kind == ReplyKind.ASK_CHOICE
+    assert agent.handle_text(conv, "1").kind == ReplyKind.ASK_INTENT
     assert agent.handle_text(conv, "les factures").kind == ReplyKind.PREVIEW
-
-
-def test_homonyms_ask_which_one_then_number_needs_no_llm():
-    llm_responses = [Extraction(recipient="Jean", intent="Réunion avancée à 9h"), DRAFT]
-    agent, _ = make_agent(llm_responses)
-    conv = agent.start()
-    reply = agent.handle_text(conv, "mail à Jean, réunion avancée à 9h")
-    assert reply.kind == ReplyKind.ASK_CHOICE
-    assert "1. Jean Dupont" in reply.text and "2. Jean Martin" in reply.text
-
-    reply = agent.handle_text(conv, "2")
-    assert reply.kind == ReplyKind.PREVIEW
-    assert conv.recipient.email == "jmartin@gmail.com"
-    assert len(agent.llm.calls) == 2  # extraction + writing, not for "2"
-
-
-def test_new_address_must_be_confirmed():
-    agent, _ = make_agent(
-        [
-            Extraction(recipient="paul@nouveau.fr", intent="Confirmer le rdv"),
-            Extraction(confirmation=True),
-            DRAFT,
-        ]
-    )
-    conv = agent.start()
-    reply = agent.handle_text(conv, "mail à paul arobase nouveau point fr")
-    assert reply.kind == ReplyKind.CONFIRM_EMAIL
-    assert "p a u l @" in reply.text  # spelled out letter by letter
-    assert conv.recipient is None
-    assert agent.handle_text(conv, "oui").kind == ReplyKind.PREVIEW
-    assert conv.recipient.email == "paul@nouveau.fr"
-
-
-def test_new_address_refused_then_corrected():
-    agent, _ = make_agent(
-        [
-            Extraction(recipient="martin.b@free.fr", intent="Plans prêts"),
-            Extraction(confirmation=False, recipient="martin.d@free.fr"),
-        ]
-    )
-    conv = agent.start()
-    agent.handle_text(conv, "mail à martin point b arobase free point fr")
-    reply = agent.handle_text(conv, "non c'est martin point d")
-    assert reply.kind == ReplyKind.CONFIRM_EMAIL
-    assert conv.unconfirmed_email == "martin.d@free.fr"
-
-
-def test_unknown_contact_asks_for_address_and_keeps_the_name():
-    agent, _ = make_agent(
-        [
-            Extraction(recipient="Paul Girard", intent="Confirmer le rdv"),
-            Extraction(recipient="paul.girard@gmail.com"),
-            Extraction(confirmation=True),
-            DRAFT,
-        ]
-    )
-    conv = agent.start()
-    assert agent.handle_text(conv, "mail à Paul Girard").kind == ReplyKind.ASK_EMAIL
-    assert agent.handle_text(conv, "paul.girard@gmail.com").kind == ReplyKind.CONFIRM_EMAIL
-    agent.handle_text(conv, "oui")
-    assert conv.recipient.name == "Paul Girard"
 
 
 def test_unclear_message_is_reformulated_and_confirmed():
@@ -205,39 +300,42 @@ def test_unclear_message_is_reformulated_and_confirmed():
             Extraction(
                 unclear=True,
                 reformulation="écrire à Sophie Garnier pour les factures",
-                recipient="Sophie Garnier",
+                recipient=Hint(heard_names=["Sophie Garnier"]),
                 intent="Envoyer les factures",
             ),
             Extraction(confirmation=True),
-            DRAFT,
         ]
     )
     conv = agent.start()
-    reply = agent.handle_text(conv, "euh sophie euh factures truc")
-    assert reply.kind == ReplyKind.CLARIFY
-    assert conv.recipient is None  # nothing guessed yet
-    assert agent.handle_text(conv, "oui").kind == ReplyKind.PREVIEW
-    assert conv.recipient.email == "s.garnier@comptable.fr"
+    assert agent.handle_text(conv, "euh sophie euh factures truc").kind == ReplyKind.CLARIFY
+    assert conv.recipient_hint is None  # nothing used before confirmation
+    assert agent.handle_text(conv, "oui").kind == ReplyKind.ASK_CHOICE
 
 
 def test_edit_creates_a_new_version():
     new_draft = EmailDraft(subject="Factures", body="Bonjour,\n\nVoici les factures par virement.")
-    responses = [full_request(), DRAFT, Extraction(edit_instruction="ajoute virement"), new_draft]
+    responses = [sophie_request(), DRAFT, Extraction(edit_instruction="ajoute virement"), new_draft]
     agent, _, conv, _ = to_preview(responses)
     assert agent.handle_action(conv, Action.EDIT).kind == ReplyKind.ASK_EDIT
     reply = agent.handle_text(conv, "ajoute que je paie par virement")
     assert reply.kind == ReplyKind.PREVIEW
     assert conv.draft.version == 2
-    assert "virement" in conv.draft.body
     writer_prompt = agent.llm.calls[-1][1]
     assert "Previous draft" in writer_prompt and "ajoute virement" in writer_prompt
 
 
-def test_change_of_recipient_at_preview():
-    responses = [full_request(), DRAFT, Extraction(recipient="Jean Dupont"), DRAFT]
+def test_change_of_recipient_at_preview_goes_through_a_choice():
+    responses = [
+        sophie_request(),
+        DRAFT,
+        Extraction(recipient=Hint(heard_names=["Jean Dupont"])),
+        DRAFT,
+    ]
     agent, _, conv, _ = to_preview(responses)
     reply = agent.handle_text(conv, "envoie-le plutôt à Jean Dupont")
-    assert reply.kind == ReplyKind.PREVIEW
+    assert reply.kind == ReplyKind.ASK_CHOICE
+    assert conv.state == State.COLLECTING
+    assert agent.handle_text(conv, "1").kind == ReplyKind.PREVIEW
     assert conv.recipient.email == "jean.dupont@btp-dupont.fr"
 
 

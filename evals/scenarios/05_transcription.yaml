@@ -4,27 +4,25 @@
   description: "'Dupond' instead of 'Dupont'."
   turns:
     - user: "Envoie un mail à Jean Dupond pour confirmer la livraison des parpaings mercredi."
-      expect:
-        state: awaiting_validation
-        recipient_email: jean.dupont@btp-dupont.fr
-        body_contains: ["parpaing", "mercredi"]
+      expect: {reply_kind: ask_choice, top_proposal: jean.dupont@btp-dupont.fr}
+    - choose: jean.dupont@btp-dupont.fr
+      expect: {state: awaiting_validation, body_contains: ["parpaing", "mercredi"]}
 
 - id: typo_lefebvre_and_spelling
   category: transcription
   description: Misspelled name and many spelling mistakes.
   turns:
     - user: "mail a helene lefebvre objet reunion dis lui ke je peu pas venir a la reunion de jeudi"
-      expect:
-        state: awaiting_validation
-        recipient_email: helene.lefevre@mairie-lyon.fr
-        body_contains: ["jeudi"]
+      expect: {reply_kind: ask_choice, top_proposal: helene.lefevre@mairie-lyon.fr}
+    - choose: helene.lefevre@mairie-lyon.fr
+      expect: {state: awaiting_validation, body_contains: ["jeudi"]}
 
 - id: garbled_message
   category: transcription
   description: Incomprehensible message, the agent must not guess.
   turns:
     - user: "euh envoie le truc là à machin pour le… enfin tu vois pour demain quoi"
-      expect: {state: collecting, reply_kind: [clarify, ask_recipient, ask_intent]}
+      expect: {state: collecting, reply_kind: [clarify, ask_recipient, ask_more_clues, ask_intent]}
 
 - id: hesitant_voice_message
   category: transcription
@@ -32,8 +30,7 @@
   turns:
     - user: "mail euh nadia haddad euh retard euh demain chantier euh trente minute"
       expect: {}
-    - user: "Oui c'est ça : je serai en retard de 30 minutes demain au chantier."
-      expect:
-        state: awaiting_validation
-        recipient_email: nadia.haddad@orange.fr
-        body_contains: ["30|trente"]
+    - user: "Oui c'est ça : écris à Nadia Haddad que je serai en retard de 30 minutes demain au chantier."
+      expect: {reply_kind: ask_choice, proposals_include: [nadia.haddad@orange.fr]}
+    - choose: nadia.haddad@orange.fr
+      expect: {state: awaiting_validation, body_contains: ["30|trente"]}

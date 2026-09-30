@@ -12,6 +12,7 @@ from voxmail.agent.agent import Agent
 from voxmail.contacts.directory import ContactDirectory
 from voxmail.domain.contacts import normalize
 from voxmail.domain.models import Action, AgentReply, Conversation, ReplyKind
+from voxmail.domain.recipient_search import DEFAULT_SCORING, ScoringConfig
 from voxmail.domain.state_machine import ConversationState
 from voxmail.llm.base import LLMClient
 from voxmail.mail.sender import FakeMailSender
@@ -28,6 +29,8 @@ class Expect(BaseModel):
     recipient_email: str | None = None
     pending_email: str | None = None
     choices_count: int | None = None
+    proposals_include: list[str] = []
+    top_proposal: str | None = None
     tone: Literal["vous", "tu"] | None = None
     subject_contains: list[str] = []
     body_contains: list[str] = []
@@ -40,19 +43,22 @@ class Expect(BaseModel):
 
 
 class Turn(BaseModel):
-    """Exactly one of: a user message, a button press, or waiting some seconds."""
+    """Exactly one of: a user message, a button press, picking the contact with this
+    email in the proposed list (like a human tapping it), or waiting some seconds."""
 
     model_config = ConfigDict(extra="forbid")
 
     user: str | None = None
     action: Action | None = None
+    choose: str | None = None
     wait: int | None = None
     expect: Expect = Expect()
 
     @model_validator(mode="after")
     def exactly_one_step(self) -> "Turn":
-        if sum(x is not None for x in (self.user, self.action, self.wait)) != 1:
-            raise ValueError("a turn needs exactly one of: user, action, wait")
+        steps = (self.user, self.action, self.choose, self.wait)
+        if sum(x is not None for x in steps) != 1:
+            raise ValueError("a turn needs exactly one of: user, action, choose, wait")
         return self
 
 
@@ -112,8 +118,14 @@ def check(expect: Expect, conv: Conversation, reply: AgentReply | None) -> list[
         errors.append(
             f"pending_email: expected {expect.pending_email}, got {conv.unconfirmed_email}"
         )
-    if expect.choices_count is not None and len(conv.choices) != expect.choices_count:
-        errors.append(f"choices: expected {expect.choices_count}, got {len(conv.choices)}")
+    proposed = [c.email for c in conv.choices]
+    if expect.choices_count is not None and len(proposed) != expect.choices_count:
+        errors.append(f"choices: expected {expect.choices_count}, got {len(proposed)}")
+    for email in expect.proposals_include:
+        if email not in proposed:
+            errors.append(f"proposals: {email} missing from {proposed}")
+    if expect.top_proposal and proposed[:1] != [expect.top_proposal]:
+        errors.append(f"top proposal: expected {expect.top_proposal}, got {proposed[:1]}")
     if expect.tone and conv.tone != expect.tone:
         errors.append(f"tone: expected {expect.tone}, got {conv.tone}")
 
@@ -125,9 +137,14 @@ def check(expect: Expect, conv: Conversation, reply: AgentReply | None) -> list[
     return errors
 
 
-def run_scenario(scenario: Scenario, llm: LLMClient, contacts: ContactDirectory) -> ScenarioResult:
+def run_scenario(
+    scenario: Scenario,
+    llm: LLMClient,
+    contacts: ContactDirectory,
+    scoring: ScoringConfig = DEFAULT_SCORING,
+) -> ScenarioResult:
     clock = FakeClock()
-    agent = Agent(llm, contacts, FakeMailSender(), signature="Rayane Ouali", clock=clock)
+    agent = Agent(llm, contacts, FakeMailSender(), "Rayane Ouali", clock=clock, scoring=scoring)
     conv = agent.start()
     result = ScenarioResult(scenario)
 
@@ -138,6 +155,12 @@ def run_scenario(scenario: Scenario, llm: LLMClient, contacts: ContactDirectory)
                 reply = agent.handle_text(conv, turn.user)
             elif turn.action is not None:
                 reply = agent.handle_action(conv, turn.action)
+            elif turn.choose is not None:
+                proposed = [c.email for c in conv.choices]
+                if turn.choose not in proposed:
+                    result.failures.append(f"turn {number}: {turn.choose} not in {proposed}")
+                    break
+                reply = agent.handle_choice(conv, proposed.index(turn.choose) + 1)
             else:
                 clock.now += timedelta(seconds=turn.wait or 0)
                 reply = agent.process_due_send(conv)

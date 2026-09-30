@@ -7,7 +7,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from voxmail.domain.contacts import Candidate
+from voxmail.domain.contacts import Contact
+from voxmail.domain.recipient_search import RecipientHint
 from voxmail.domain.state_machine import ConversationState, transition
 
 Tone = Literal["vous", "tu"]
@@ -16,11 +17,9 @@ Tone = Literal["vous", "tu"]
 class Extraction(BaseModel):
     """What the LLM understood from ONE user message. Every field is optional."""
 
-    recipient: str | None = Field(
+    recipient: RecipientHint | None = Field(
         default=None,
-        description="Name or email address of the person to write to, as given by the user. "
-        "Dictated addresses must be converted to a real address "
-        "('jean point dupont arobase gmail point com' -> 'jean.dupont@gmail.com').",
+        description="What was heard about the recipient, only if this message mentions one.",
     )
     subject: str | None = Field(default=None, description="Email subject, if the user gave one.")
     intent: str | None = Field(
@@ -31,10 +30,6 @@ class Extraction(BaseModel):
     tone: Tone | None = Field(
         default=None,
         description="'tu' only if the user asks for it or the context clearly says so.",
-    )
-    choice: int | None = Field(
-        default=None,
-        description="Number (1-based) of the option the user picked, if a list was offered.",
     )
     confirmation: bool | None = Field(
         default=None, description="Answer to the last yes/no question: true = yes, false = no."
@@ -73,11 +68,11 @@ class Conversation(BaseModel):
     state: ConversationState = ConversationState.COLLECTING
     state_entered_at: datetime
 
-    recipient_query: str | None = None  # what the user said: "Jean", "jean@x.fr"...
-    recipient_name_hint: str | None = None  # name kept when we must ask for an address
-    recipient: Candidate | None = None  # resolved and safe to use
-    choices: list[Candidate] = []  # options offered when ambiguous
+    recipient_hint: RecipientHint | None = None  # what the LLM heard about the recipient
+    choices: list[Contact] = []  # suggestions shown, the human must pick one
+    needs_more_clues: bool = False  # "none of these" or nobody found: ask for more
     unconfirmed_email: str | None = None  # new address waiting for spelling confirmation
+    recipient: Contact | None = None  # ONLY set by a human choice or confirmation
     pending_extraction: Extraction | None = None  # unclear message waiting for confirmation
 
     subject: str | None = None
@@ -107,7 +102,7 @@ class Action(StrEnum):
 class ReplyKind(StrEnum):
     ASK_RECIPIENT = "ask_recipient"
     ASK_CHOICE = "ask_choice"
-    ASK_EMAIL = "ask_email"
+    ASK_MORE_CLUES = "ask_more_clues"
     CONFIRM_EMAIL = "confirm_email"
     ASK_INTENT = "ask_intent"
     CLARIFY = "clarify"

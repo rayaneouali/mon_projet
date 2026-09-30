@@ -1,39 +1,44 @@
-# Several possible recipients: the agent must ask which one.
-- id: homonym_pick_by_number
+# Several possible recipients: all are proposed, the human picks.
+- id: homonym_pick_second
   category: homonyms
-  description: Two Jean, the user answers with a number.
+  description: Two Jean, the user taps the less frequent one.
   turns:
     - user: "Envoie un mail à Jean pour lui dire que la réunion de chantier est avancée à 9h."
-      expect: {state: collecting, reply_kind: ask_choice, choices_count: 2}
-    - user: "1"
-      expect: {state: awaiting_validation, recipient_email: jean.dupont@btp-dupont.fr, body_contains: ["9"]}
+      expect:
+        reply_kind: ask_choice
+        proposals_include: [jean.dupont@btp-dupont.fr, jmartin@gmail.com]
+    - choose: jmartin@gmail.com
+      expect: {state: awaiting_validation, recipient_email: jmartin@gmail.com, body_contains: ["9"]}
 
-- id: homonym_pick_by_name
+- id: homonym_answer_in_words
   category: homonyms
-  description: Two Jean, the user answers with the full name.
+  description: Two Jean, the user answers with a name; new search, then the human taps.
   turns:
     - user: "Envoie un mail à Jean pour lui dire que la réunion de chantier est avancée à 9h."
-      expect: {state: collecting, reply_kind: ask_choice}
+      expect: {reply_kind: ask_choice}
     - user: "Jean Martin"
+      expect: {reply_kind: ask_choice, top_proposal: jmartin@gmail.com}
+    - choose: jmartin@gmail.com
       expect: {state: awaiting_validation, recipient_email: jmartin@gmail.com}
 
-- id: homonym_pick_by_description
+- id: homonym_described_by_company
   category: homonyms
-  description: Two Jean, the user describes the right one.
+  description: Two Jean, the user describes the right one by its company.
   turns:
     - user: "Écris à Jean que les plans modifiés sont prêts."
-      expect: {state: collecting, reply_kind: ask_choice}
+      expect: {reply_kind: ask_choice}
     - user: "Celui de chez BTP Dupont."
-      expect: {state: awaiting_validation, recipient_email: jean.dupont@btp-dupont.fr}
+      expect: {reply_kind: ask_choice, top_proposal: jean.dupont@btp-dupont.fr}
+    - choose: jean.dupont@btp-dupont.fr
+      expect: {state: awaiting_validation}
 
 - id: several_addresses
   category: homonyms
-  description: One contact with two addresses, the user picks the professional one.
+  description: One contact with two addresses, both proposed.
   turns:
     - user: "Mail à Karim pour lui demander s'il est dispo pour une fuite rue Garibaldi demain."
-      expect: {state: collecting, reply_kind: ask_choice, choices_count: 2}
-    - user: "L'adresse pro."
       expect:
-        state: awaiting_validation
-        recipient_email: karim@benali-plomberie.fr
-        body_contains: ["fuite", "garibaldi"]
+        reply_kind: ask_choice
+        proposals_include: [karim@benali-plomberie.fr, k.benali@gmail.com]
+    - choose: karim@benali-plomberie.fr
+      expect: {state: awaiting_validation, body_contains: ["fuite", "garibaldi"]}

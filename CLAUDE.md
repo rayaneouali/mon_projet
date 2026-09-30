@@ -30,7 +30,10 @@ Rayane, 19 ans, débutant (bootcamp Jedha AI Engineering). Deux objectifs à ég
 - Le LLM **ne déclenche jamais l'envoi**. Il extrait, rédige, pose des questions. L'envoi est du code
   déterministe, déclenché uniquement par un choix explicite de l'utilisateur (bouton / choix fermé).
 - Zéro double envoi : clé d'idempotence par brouillon validé ; déduplication des webhooks par ID.
-- Homonymes ou plusieurs adresses : demander lequel.
+- Destinataire : le LLM ne choisit JAMAIS l'adresse et n'en invente jamais. Il rapporte ce qu'il a
+  entendu (`RecipientHint`), le code classe les contacts, et c'est TOUJOURS l'humain qui choisit
+  dans la liste (même avec un seul contact à 99). Seul `Agent.handle_choice` (numéro / tap)
+  sélectionne un contact ; une réponse en texte libre = nouveaux indices, nouvelle recherche.
 - Adresse jamais utilisée ou dictée à l'oral : faire confirmer l'orthographe.
 - Vocal mal compris : reformuler et demander confirmation, ne pas deviner.
 - Machine à états explicite, sauvegardée en base :
@@ -69,13 +72,35 @@ pytest, ruff, type hints partout, GitHub Actions · AWS (UE) · Sentry.
 - L'heure est injectée (`clock`) pour que les tests contrôlent le temps.
 
 ## Architecture (phase 1)
-- `domain/` : `state_machine.py`, `contacts.py` (résolution sans LLM), `models.py`.
+- `domain/` : `state_machine.py`, `contacts.py` (Contact = 1 adresse, normalisation),
+  `phonetic.py` (clé phonétique FRANÇAISE maison, testée), `recipient_search.py`
+  (score 0-100 : nom 60 % + contexte 25 % + habitude 15 %, poids dans `Settings`), `models.py`.
 - `agent/agent.py` : le LLM extrait (`Extraction`) et rédige (`EmailDraft`) ; le code décide
   de la question suivante et ajoute la signature. Questions posées par du code (texte fixe).
 - `llm/` : interface `LLMClient.generate(system, user, output_type)`, `AnthropicLLM`
   (`messages.parse` + Pydantic), `FakeLLM` pour les tests.
-- `contacts/`, `mail/` : interfaces + implémentations factices (Google/Gmail en phase 2).
+- `contacts/` : `ContactDirectory` (JSON factice, Google en phase 2) et `ChoiceMemory`
+  (nom entendu → contact choisi, bonus de score, jamais de sélection automatique).
+- `mail/` : interface + envoi factice (Gmail en phase 2).
 - `evaluation.py` + `evals/scenarios/*.yaml` + `evals/run_evals.py`.
+
+## Recherche du destinataire : règles et décisions
+- Un contact n'est proposé que si son NOM (similarité ≥ 0,75) ou son ENTREPRISE (≥ 0,75)
+  correspond. L'habitude et les choix appris réordonnent, mais ne qualifient jamais un contact.
+- Si une composante manque (pas de nom entendu, ou indice qui ne correspond à personne),
+  son poids passe à l'autre ; le poids de l'habitude ne bouge pas.
+- Critère : bon contact proposé ≥ 95 %, classé 1er ≥ 80 % (`tests/recipient_cases.py`,
+  45 cas sur 36 contacts : 100 % / 98 % actuellement).
+- Limite connue : avec nos scopes, Google ne donne ni fréquence ni date d'échange. L'habitude
+  sera alimentée par les envois faits via Voxmail et par `ChoiceMemory` (démarre à 0).
+- Phase 2 : table `contacts` (user_id, first_name, last_name, full_name, email, company,
+  interaction_count, last_interaction_at + champs normalisés) et table des choix appris.
+  Synchro proposée : complète à la connexion Google, puis quotidienne (la nuit, incrémentale
+  si l'API People le permet — à vérifier), plus une relance à la demande quand une recherche
+  ne trouve personne (max 1 fois/heure).
+- Phase 3 (transcription) : passer les noms des contacts les plus fréquents comme indice de
+  vocabulaire au modèle de transcription. Paramètre et limite de taille À VÉRIFIER dans la
+  doc du fournisseur (non accessible depuis cet environnement).
 
 ## Commandes
 ```bash

@@ -54,6 +54,7 @@ def main() -> int:
         sender=sender,
         signature=settings.user_signature,
         send_delay=timedelta(seconds=settings.send_delay_seconds),
+        scoring=settings.scoring(),
     )
     conv = agent.start()
     print("Voxmail (phase 1, envoi simulé). Dites-moi à qui écrire et quoi dire.")

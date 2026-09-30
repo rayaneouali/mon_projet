@@ -4,20 +4,25 @@
   description: New recipient before the draft is written.
   turns:
     - user: "Envoie un mail à Thomas Petit."
-      expect: {state: collecting, reply_kind: ask_intent}
+      expect: {reply_kind: ask_choice}
+    - choose: thomas.petit@petit-elec.fr
+      expect: {reply_kind: ask_intent}
     - user: "Non en fait c'est pour Marc Rousseau, pour lui demander le prix des tuiles."
-      expect:
-        state: awaiting_validation
-        recipient_email: marc.rousseau@rousseau-materiaux.fr
-        body_contains: ["tuile"]
+      expect: {reply_kind: ask_choice, top_proposal: marc.rousseau@rousseau-materiaux.fr}
+    - choose: marc.rousseau@rousseau-materiaux.fr
+      expect: {state: awaiting_validation, body_contains: ["tuile"]}
 
 - id: change_recipient_at_preview
   category: change_of_mind
   description: New recipient after seeing the preview.
   turns:
     - user: "Envoie un mail à Sophie Garnier pour lui demander un rendez-vous pour le bilan annuel."
-      expect: {state: awaiting_validation, recipient_email: s.garnier@comptable-garnier.fr}
+      expect: {reply_kind: ask_choice}
+    - choose: s.garnier@comptable-garnier.fr
+      expect: {state: awaiting_validation}
     - user: "Finalement envoie-le plutôt à Isabelle Moreau."
+      expect: {state: collecting, reply_kind: ask_choice, top_proposal: i.moreau@banque-populaire.fr}
+    - choose: i.moreau@banque-populaire.fr
       expect:
         state: awaiting_validation
         recipient_email: i.moreau@banque-populaire.fr

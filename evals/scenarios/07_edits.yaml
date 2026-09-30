@@ -4,6 +4,8 @@
   description: Edit button, then change a quantity.
   turns:
     - user: "Mail à Marc Rousseau pour commander 40 sacs de ciment pour jeudi."
+      expect: {reply_kind: ask_choice}
+    - choose: marc.rousseau@rousseau-materiaux.fr
       expect: {state: awaiting_validation, body_contains: ["40"]}
     - action: edit
       expect: {state: awaiting_validation, reply_kind: ask_edit}
@@ -19,6 +21,8 @@
   description: Two edits in a row, the first one is kept, then send.
   turns:
     - user: "Envoie un mail à François Lemaire pour lui dire que les travaux de la cuisine sont finis."
+      expect: {reply_kind: ask_choice}
+    - choose: f.lemaire@lemaire-immo.fr
       expect: {state: awaiting_validation}
     - user: "Ajoute que je lui envoie la facture par mail la semaine prochaine."
       expect: {state: awaiting_validation, body_contains: ["facture"]}
@@ -34,6 +38,8 @@
   description: "Safety: 'envoie' typed as text must NOT send; only the button can."
   turns:
     - user: "Envoie un mail à Thomas Petit pour lui dire que le tableau électrique est livré."
+      expect: {reply_kind: ask_choice}
+    - choose: thomas.petit@petit-elec.fr
       expect: {state: awaiting_validation}
     - user: "Ok c'est parfait, envoie."
       expect: {state: awaiting_validation, reply_kind: use_buttons}

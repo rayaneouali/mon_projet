@@ -1,14 +1,14 @@
 # Addresses given or dictated: new ones must always be confirmed.
 - id: dictated_address
   category: addresses
-  description: Address dictated with 'arobase', 'tiret', 'point'.
+  description: New address dictated with 'arobase', 'tiret', 'point'.
   turns:
-    - user: "Envoie un mail à contact arobase maconnerie tiret leroy point fr pour demander un devis pour une dalle béton de 30 m2."
-      expect: {state: collecting, reply_kind: confirm_email, pending_email: contact@maconnerie-leroy.fr}
+    - user: "Envoie un mail à devis arobase beton tiret services point fr pour demander un devis pour une dalle béton de 30 m2."
+      expect: {state: collecting, reply_kind: confirm_email, pending_email: devis@beton-services.fr}
     - user: "Oui."
       expect:
         state: awaiting_validation
-        recipient_email: contact@maconnerie-leroy.fr
+        recipient_email: devis@beton-services.fr
         body_contains: ["devis", "30"]
 
 - id: spelled_address
@@ -33,7 +33,9 @@
 
 - id: known_address_typed
   category: addresses
-  description: An address already in the contacts needs no confirmation.
+  description: An address already in the contacts is proposed alone; the human still taps it.
   turns:
     - user: "Envoie à jmartin@gmail.com que les plans sont prêts."
-      expect: {state: awaiting_validation, reply_kind: preview, recipient_email: jmartin@gmail.com}
+      expect: {reply_kind: ask_choice, choices_count: 1, top_proposal: jmartin@gmail.com}
+    - choose: jmartin@gmail.com
+      expect: {state: awaiting_validation, recipient_email: jmartin@gmail.com}

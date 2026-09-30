@@ -1,6 +1,7 @@
 """Instructions given to the LLM, and the text describing the current conversation."""
 
 from voxmail.domain.models import Conversation
+from voxmail.domain.recipient_search import RecipientHint
 
 EXTRACTION_SYSTEM = """\
 You help French small-business owners (craftsmen, site managers) send emails by \
@@ -11,11 +12,17 @@ Your only job: extract what this message says, as structured data. You never \
 send anything and you never write the email here.
 
 Rules:
-- recipient: the name or email address the user wants to write to, as given. \
-Only fill it if the message names a recipient (or a different one than before). \
-If the user dictates an address ("jean point dupont arobase gmail point com", \
-letters spelled one by one, "tiret" = "-", "tiret du bas" = "_"), convert it to \
-a real address. Never invent an address.
+- recipient: fill it ONLY if this message mentions who to write to. You never \
+choose a contact and never invent an address: you report what you heard.
+  - heard_names: the names heard. If the sound is ambiguous or the transcription \
+looks wrong, give several hypotheses (e.g. ["Jacques", "Jack"], ["Mauger", "Mojé"]).
+  - company: a company mentioned ("de chez Mecalux" -> "Mecalux").
+  - other_clues: any other clue ("mon comptable", "le client de Tours").
+  - email: an address given or dictated, converted to a real address \
+("jean point dupont arobase gmail point com" -> "jean.dupont@gmail.com", letters \
+spelled one by one, "tiret" = "-", "tiret du bas" = "_").
+  If the last question offered a numbered list of contacts and the user answers \
+with words instead of a number, report their words as new clues in recipient.
 - subject: only if the user explicitly gives a subject.
 - intent: the full, up-to-date content the email must convey, in French, merging \
 the intent already known with this message. Keep every concrete fact (dates, \
@@ -23,8 +30,6 @@ times, quantities, places, amounts). Leave null if what to say is still unknown 
 or too vague to write an email ("préviens-le", "écris-lui").
 - tone: "tu" only if the user asks to tutoyer or the relationship is clearly \
 familiar; "vous" if the user asks to vouvoyer; otherwise null.
-- choice: if the last question offered numbered options and the user picks one \
-(by number, name, address or description), its number (1-based).
 - confirmation: if the last question was a yes/no question, true for yes, false for no.
 - cancel: true if the user wants to abandon this email.
 - wants_to_send: true if the user asks in words to send the email ("envoie", "c'est bon").
@@ -53,12 +58,29 @@ previous draft and keep the rest as it was.
 """
 
 
+def describe_hint(hint: RecipientHint | None) -> str:
+    """'« Jacques » ou « Jack », de chez Mecalux' — what was understood about the recipient."""
+    if hint is None or hint.is_empty():
+        return "personne"
+    parts = []
+    if hint.heard_names:
+        parts.append(" ou ".join(f"« {name} »" for name in hint.heard_names))
+    if hint.email:
+        parts.append(f"l'adresse {hint.email}")
+    if hint.company:
+        parts.append(f"de chez {hint.company}")
+    if hint.other_clues:
+        parts.append(f"({hint.other_clues})")
+    return ", ".join(parts)
+
+
 def describe_conversation(conversation: Conversation) -> str:
     """Summarize what is already known, so the LLM has the context of the message."""
     recipient = conversation.recipient
+    chosen = f"{recipient.display_name} <{recipient.email}>" if recipient else "not yet"
     lines = [
-        f"- recipient requested: {conversation.recipient_query or 'unknown'}",
-        f"- recipient resolved: {f'{recipient.name} <{recipient.email}>' if recipient else 'no'}",
+        f"- recipient heard so far: {describe_hint(conversation.recipient_hint)}",
+        f"- recipient chosen by the user: {chosen}",
         f"- subject: {conversation.subject or 'unknown'}",
         f"- intent: {conversation.intent or 'unknown'}",
         f"- tone: {conversation.tone}",
@@ -78,8 +100,9 @@ def extraction_input(conversation: Conversation, message: str) -> str:
 
 def writer_input(conversation: Conversation) -> str:
     recipient = conversation.recipient
+    name = recipient.full_name if recipient and recipient.full_name else "unknown"
     lines = [
-        f"Recipient name: {recipient.name if recipient and recipient.name else 'unknown'}",
+        f"Recipient name: {name}",
         f"Tone: {conversation.tone}",
         f"Subject: {conversation.subject or 'none given'}",
         f"Intent: {conversation.intent}",
