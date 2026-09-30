@@ -1,5 +1,7 @@
 # Voxmail — contexte du projet
 
+> Bilan détaillé (avancement, reste à faire, coûts, points à vérifier) : `docs/BILAN.md`.
+
 Assistant WhatsApp (vocal ou texte) qui rédige et envoie des mails depuis le Gmail de l'utilisateur.
 Cible : patrons de PME/TPE, artisans, chefs de chantier, mal à l'aise à l'écrit.
 
