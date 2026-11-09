@@ -5,8 +5,9 @@ from datetime import timedelta
 import streamlit as st
 
 import interface
-from services import dates, semaine
+from services import acces, dates, semaine
 
+acces.exiger(acces.ROLE_CHEFS)
 st.set_page_config(layout="wide")  # tableau large : on prend toute la largeur sur ordinateur
 st.title("📅 Semaine")
 

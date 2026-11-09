@@ -11,11 +11,12 @@ from datetime import date
 import streamlit as st
 
 import interface
-from services import dates, saisie
+from services import acces, dates, saisie
 from services.references import References
 
 AUCUN_DOSSIER = 0  # valeur du menu pour « Aucun dossier » (aucun id de la base ne vaut 0)
 
+role = acces.exiger(acces.ROLE_CHEFS)
 st.title("📝 Saisie du jour")
 interface.afficher_message("saisie_message")
 
@@ -57,7 +58,7 @@ def enregistrer(
         dossier_id,
         lignes,
         dates.aujourdhui(),
-        qui=st.session_state.get("role", "?"),
+        qui=role,
         nom_equipe=refs.nom_equipe(equipe_id),
     )
     if ok:

@@ -46,3 +46,12 @@ Une ligne par décision : **quoi** — pourquoi.
 - **Un doublon n'empêche pas de créer les autres demandes** — chaque gars est inséré dans une sous-transaction (« savepoint »). Si la contrainte UNIQUE refuse un gars, on annule seulement celui-là et on affiche : « Déjà demandé pour : Karim ».
 - **Le menu de statut enregistre tout seul (callback `on_change`)** — pas de bouton « Enregistrer » en plus. Le menu affiche toujours l'état réel de la base.
 - **Suppression en deux clics (« Supprimer » puis « Oui, supprimer »)** — la confirmation est demandée dans la page elle-même, sans fenêtre surgissante (plus fiable sur téléphone).
+
+## Accès et administration
+
+- **Menu construit selon le code (`st.navigation`)** — avec le code chefs, la page Admin n'est pas dans la liste des pages : elle n'existe pas pour eux, même en tapant son adresse. En plus, chaque page vérifie l'accès en haut (`acces.exiger`), c'est une double sécurité.
+- **Jeton dans l'adresse (`?acces=…`) au lieu d'un cookie** — c'est la façon la plus simple de garder la connexion sur le téléphone sans bibliothèque en plus. Le jeton est calculé à partir du code (HMAC) mais ne le révèle pas. Si tu changes le code, tous les anciens liens sont refusés.
+- **1 seconde d'attente après un mauvais code** — freine quelqu'un qui essaierait des codes au hasard.
+- **Pas de colonnes « obligatoires » dans les tableaux Admin** — sinon, une ligne incomplète disparaît sans prévenir. Vu en test : ça affichait « aucun changement ». Maintenant, le service répond « Le nom du gars est obligatoire ».
+- **Une équipe avec des gars ou des saisies ne se supprime pas** — message clair : on déplace d'abord les gars, ou on renomme l'équipe.
+- **Données d'exemple jamais créées automatiquement** — elles n'existent que si tu lances `scripts/seed.py`. Tu les retires avec `--effacer`, avant de donner l'app aux chefs.

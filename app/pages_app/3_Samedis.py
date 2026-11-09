@@ -3,17 +3,17 @@
 import streamlit as st
 
 import interface
-from services import dates, samedis
+from services import acces, dates, samedis
 
 AUCUN_DOSSIER = 0
 
+qui = acces.exiger(acces.ROLE_CHEFS)
 st.title("🗓️ Samedis")
 interface.afficher_message("samedis_message")
 
 ok, refs = interface.essayer(interface.references)
 if not ok:
     st.stop()
-qui = st.session_state.get("role", "?")
 
 
 def quand_statut_change(demande_id: int) -> None:
