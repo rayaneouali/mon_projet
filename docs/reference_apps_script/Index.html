@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  :root{--bg:#f4f6f9;--card:#fff;--ink:#1d2533;--mute:#6b7586;--line:#e3e7ee;--brand:#1f4e8c;--ok:#1d8a4e;--ko:#c0392b;--warn:#b7791f}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+  header{background:var(--brand);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+  header h1{font-size:17px;margin:0;font-weight:600;flex:1}
+  nav{display:flex;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:46px;z-index:4}
+  nav button{flex:1;border:0;background:none;padding:12px 4px;font-size:15px;color:var(--mute);border-bottom:3px solid transparent;cursor:pointer}
+  nav button.on{color:var(--brand);border-bottom-color:var(--brand);font-weight:600}
+  main{max-width:1100px;margin:0 auto;padding:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+  label{display:block;font-size:13px;color:var(--mute);margin:0 0 4px}
+  input,select,textarea{width:100%;padding:10px;border:1px solid #cfd6e1;border-radius:8px;font-size:16px;background:#fff;color:var(--ink)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media(max-width:600px){.row,.row3{grid-template-columns:1fr}}
+  .btn{border:0;border-radius:8px;padding:12px 16px;font-size:16px;font-weight:600;cursor:pointer;background:var(--brand);color:#fff}
+  .btn.full{width:100%}
+  .btn.ghost{background:#eef2f8;color:var(--brand)}
+  .btn:disabled{opacity:.5}
+  .gars{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .gars:last-child{border-bottom:0}
+  .gars .nom{flex:1;min-width:110px;font-weight:600}
+  .seg{display:flex;border:1px solid #cfd6e1;border-radius:8px;overflow:hidden}
+  .seg button{border:0;background:#fff;padding:9px 12px;font-size:14px;cursor:pointer}
+  .seg button.p.on{background:var(--ok);color:#fff}
+  .seg button.a.on{background:var(--ko);color:#fff}
+  .gars select{width:auto;padding:8px;font-size:14px}
+  .x{border:0;background:none;color:var(--mute);font-size:20px;cursor:pointer;padding:0 4px}
+  .warn{font-size:12px;color:var(--warn);width:100%}
+  .muted{color:var(--mute);font-size:13px}
+  .weeknav{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .weeknav .t{flex:1;font-weight:600;text-align:center;min-width:160px}
+  .weeknav select{width:auto}
+  .tbl-wrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:10px}
+  table{border-collapse:collapse;width:100%;min-width:640px}
+  th,td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:center;font-size:13px;vertical-align:middle}
+  th{background:#f8fafc;color:var(--mute);font-weight:600}
+  td.n,th.n{text-align:left;position:sticky;left:0;background:#fff;font-weight:600;white-space:nowrap;z-index:1}
+  th.n{background:#f8fafc}
+  tr.team td{background:#eef2f8;font-weight:600;color:var(--brand);text-align:left}
+  tr.team td.d{text-align:center;font-weight:400;font-size:12px}
+  .chip{display:inline-block;padding:3px 7px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap}
+  .abs{background:#fde8e6;color:var(--ko)}
+  .none{color:#c3c9d3}
+  .sb{display:inline-block;margin-top:3px;padding:2px 6px;border-radius:10px;font-size:11px;font-weight:600}
+  .s-Demandé{background:#fff4dc;color:var(--warn)} .s-Accepté{background:#e3f4ea;color:var(--ok)}
+  .s-Refusé{background:#fde8e6;color:var(--ko)} .s-Fait{background:#e6ecf7;color:var(--brand)}
+  .ok{color:var(--ok)} .ko{color:var(--ko)}
+  .checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+  .checks label{display:flex;gap:6px;align-items:center;color:var(--ink);font-size:14px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:8px;margin:0;cursor:pointer}
+  .checks input{width:auto}
+  .sam{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .sam .nom{flex:1;min-width:120px}
+  .sam select{width:auto;padding:6px;font-size:14px}
+  h3{margin:4px 0 10px;font-size:15px}
+  h4{margin:14px 0 4px;font-size:14px;color:var(--brand)}
+  #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1d2533;color:#fff;padding:12px 18px;border-radius:10px;font-size:15px;display:none;z-index:20;max-width:90%}
+  #toast.err{background:var(--ko)}
+  .hide{display:none!important}
+  #login{max-width:340px;margin:60px auto}
+</style>
+</head>
+<body>
+<header><h1>Suivi des équipes</h1><span id="who" class="muted" style="color:#cfe0f7"></span></header>
+
+<div id="login" class="card">
+  <h3>Code d'accès</h3>
+  <input id="code" type="password" inputmode="numeric" autocomplete="off" placeholder="Code">
+  <div style="height:10px"></div>
+  <button class="btn full" id="btnLogin">Entrer</button>
+</div>
+
+<div id="app" class="hide">
+  <nav>
+    <button data-tab="saisie" class="on">Saisie du jour</button>
+    <button data-tab="semaine">Semaine</button>
+    <button data-tab="samedis">Samedis</button>
+  </nav>
+  <main>
+    <!-- SAISIE -->
+    <section id="t-saisie">
+      <div class="card">
+        <div class="row3">
+          <div><label>Date</label><input type="date" id="sDate"></div>
+          <div><label>Équipe</label><select id="sEquipe"></select></div>
+          <div><label>Dossier / chantier</label><input id="sDossier" list="dlDossiers" placeholder="N° de dossier"></div>
+        </div>
+        <datalist id="dlDossiers"></datalist>
+        <p class="muted" id="sInfo" style="margin:10px 0 0"></p>
+      </div>
+      <div class="card">
+        <h3>Qui est là ?</h3>
+        <div id="sList"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <select id="sRenfort"><option value="">+ Ajouter un gars (renfort)</option></select>
+        </div>
+      </div>
+      <button class="btn full" id="btnSave">Enregistrer</button>
+    </section>
+
+    <!-- SEMAINE -->
+    <section id="t-semaine" class="hide">
+      <div class="weeknav">
+        <button class="btn ghost" id="wPrev">◀</button>
+        <div class="t" id="wTitle"></div>
+        <button class="btn ghost" id="wNext">▶</button>
+      </div>
+      <div class="weeknav">
+        <select id="wEquipe"></select>
+        <button class="btn ghost" id="wToday">Cette semaine</button>
+        <button class="btn ghost" id="wReload">Actualiser</button>
+      </div>
+      <div class="tbl-wrap"><table id="wTable"></table></div>
+      <div class="card" style="margin-top:14px" id="wResume"></div>
+    </section>
+
+    <!-- SAMEDIS -->
+    <section id="t-samedis" class="hide">
+      <div class="card">
+        <h3>Demander un samedi</h3>
+        <div class="row">
+          <div><label>Samedi</label><select id="qSamedi"></select></div>
+          <div><label>Dossier</label><input id="qDossier" list="dlDossiers" placeholder="N° de dossier"></div>
+        </div>
+        <div style="height:10px"></div>
+        <label>Gars concernés</label>
+        <div id="qGars"></div>
+        <div style="height:10px"></div>
+        <label>Note</label>
+        <input id="qNote" placeholder="ex : finir l'allée 4, 7h-12h">
+        <div style="height:12px"></div>
+        <button class="btn full" id="btnSamedi">Enregistrer la demande</button>
+      </div>
+      <div class="card">
+        <h3>Samedis à venir</h3>
+        <div id="qList"></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast"></div>
+
+<script>
+/* ---------- utilitaires ---------- */
+const $ = id => document.getElementById(id);
+const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+const MOIS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+const MOTIFS = ['Malade','Congé','Accident','Injustifié','Autre'];
+const STATUTS = ['Demandé','Accepté','Refusé','Fait'];
+const COLORS = [['#e6f0ff','#1f4e8c'],['#e7f6ee','#17663b'],['#fff1dc','#8a5a00'],['#f3e8fd','#6b2fa3'],
+                ['#e2f6f8','#0d6670'],['#fde9f1','#a12a5e'],['#eef0d9','#5c6410'],['#ececec','#444']];
+
+function pad(n){return String(n).padStart(2,'0')}
+function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function parse(s){const p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])}
+function addDays(s,n){const d=parse(s);d.setDate(d.getDate()+n);return iso(d)}
+function mondayOf(s){const d=parse(s);const k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return iso(d)}
+function today(){return iso(new Date())}
+function fmt(s){const d=parse(s);return JOURS[(d.getDay()+6)%7]+' '+d.getDate()+' '+MOIS[d.getMonth()]}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function colorOf(s){let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))|0;return COLORS[Math.abs(h)%COLORS.length]}
+function chip(dossier){if(!dossier)return '<span class="chip" style="background:#e3f4ea;color:#1d8a4e">Présent</span>';
+  const c=colorOf(dossier);return '<span class="chip" style="background:'+c[0]+';color:'+c[1]+'">'+esc(dossier)+'</span>'}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+
+let toastT;
+function toast(msg,err){const t=$('toast');t.textContent=msg;t.className=err?'err':'';t.style.display='block';
+  clearTimeout(toastT);toastT=setTimeout(()=>t.style.display='none',err?5000:2500)}
+
+function api(fn,...args){
+  return new Promise((res,rej)=>{
+    google.script.run.withSuccessHandler(res).withFailureHandler(e=>rej(e&&e.message?e.message:String(e)))[fn](...args);
+  });
+}
+
+/* ---------- état ---------- */
+const S = { code:'', refs:null, weeks:{}, weekMonday:mondayOf(today()), lignes:[] };
+
+async function loadWeek(monday, force){
+  if(!force && S.weeks[monday]) return S.weeks[monday];
+  const w = await api('getWeek', S.code, monday);
+  S.weeks[monday]=w; return w;
+}
+
+/* ---------- connexion ---------- */
+async function login(code){
+  $('btnLogin').disabled=true;
+  try{
+    S.refs = await api('getRefs', code);
+    S.code = code; store('mdc_code', code);
+    $('login').classList.add('hide'); $('app').classList.remove('hide');
+    initRefs(); await renderSaisie();
+  }catch(e){ toast(e,true); $('login').classList.remove('hide'); }
+  $('btnLogin').disabled=false;
+}
+$('btnLogin').onclick=()=>login($('code').value);
+$('code').onkeydown=e=>{if(e.key==='Enter')login($('code').value)};
+
+function initRefs(){
+  const eqOpts = S.refs.equipes.map(e=>'<option>'+esc(e.nom)+'</option>').join('');
+  $('sEquipe').innerHTML = eqOpts;
+  $('wEquipe').innerHTML = '<option value="">Toutes les équipes</option>'+eqOpts;
+  const last = store('mdc_equipe'); if(last && S.refs.equipes.some(e=>e.nom===last)) $('sEquipe').value=last;
+  $('dlDossiers').innerHTML = S.refs.dossiers.map(d=>'<option value="'+esc(d.code)+'">'+esc([d.client,d.lieu].filter(Boolean).join(' — '))+'</option>').join('');
+  $('sDate').value = today();
+}
+
+/* ---------- onglets ---------- */
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  ['saisie','semaine','samedis'].forEach(t=>$('t-'+t).classList.toggle('hide',t!==b.dataset.tab));
+  if(b.dataset.tab==='semaine') renderSemaine();
+  if(b.dataset.tab==='samedis') renderSamedis();
+});
+
+/* ---------- SAISIE ---------- */
+async function renderSaisie(){
+  const date=$('sDate').value, equipe=$('sEquipe').value;
+  if(!date||!equipe) return;
+  store('mdc_equipe', equipe);
+  $('sList').innerHTML='<p class="muted">Chargement…</p>';
+  let w; try{ w = await loadWeek(mondayOf(date), true); }catch(e){ toast(e,true); return; }
+  const jour = w.journal.filter(e=>e.date===date);
+  const deja = jour.filter(e=>e.equipe===equipe);
+  if(deja.length){
+    S.lignes = deja.map(e=>({gars:e.gars, statut:e.statut==='Absent'?'Absent':'Présent', note:e.note}));
+    $('sDossier').value = deja[0].dossier||'';
+    $('sInfo').innerHTML = '✔ Déjà saisi pour ce jour — tu peux corriger et ré-enregistrer.';
+  }else{
+    S.lignes = S.refs.gars.filter(g=>g.equipe===equipe).map(g=>({gars:g.nom, statut:'Présent', note:''}));
+    $('sDossier').value = '';
+    // reprend le dossier de la veille travaillée si dispo
+    const prev = w.journal.filter(e=>e.equipe===equipe && e.date<date && e.dossier).sort((a,b)=>a.date<b.date?1:-1)[0];
+    if(prev) $('sDossier').value = prev.dossier;
+    $('sInfo').innerHTML = 'Pas encore de saisie pour '+esc(equipe)+' le '+fmt(date)+'.';
+  }
+  S.ailleurs = {}; jour.filter(e=>e.equipe!==equipe).forEach(e=>S.ailleurs[e.gars]=e.equipe);
+  drawLignes();
+}
+function drawLignes(){
+  $('sList').innerHTML = S.lignes.length ? S.lignes.map((l,i)=>
+    '<div class="gars"><span class="nom">'+esc(l.gars)+'</span>'+
+    '<div class="seg"><button class="p '+(l.statut==='Présent'?'on':'')+'" data-i="'+i+'" data-s="Présent">Présent</button>'+
+    '<button class="a '+(l.statut==='Absent'?'on':'')+'" data-i="'+i+'" data-s="Absent">Absent</button></div>'+
+    (l.statut==='Absent'?'<select data-m="'+i+'"><option value="">Motif…</option>'+MOTIFS.map(m=>'<option '+(l.note===m?'selected':'')+'>'+m+'</option>').join('')+'</select>':'')+
+    '<button class="x" title="Retirer de la saisie" data-r="'+i+'">×</button>'+
+    (S.ailleurs[l.gars]?'<div class="warn">⚠ Déjà noté dans '+esc(S.ailleurs[l.gars])+' ce jour-là — enregistrer le déplace ici.</div>':'')+
+    '</div>').join('') : '<p class="muted">Aucun gars. Ajoute-en avec le menu ci-dessous.</p>';
+  const pris = new Set(S.lignes.map(l=>l.gars));
+  $('sRenfort').innerHTML = '<option value="">+ Ajouter un gars (renfort)</option>'+
+    S.refs.gars.filter(g=>!pris.has(g.nom)).map(g=>'<option value="'+esc(g.nom)+'">'+esc(g.nom)+' ('+esc(g.equipe)+')</option>').join('');
+}
+$('sList').onclick=e=>{
+  const t=e.target;
+  if(t.dataset.s){S.lignes[+t.dataset.i].statut=t.dataset.s; if(t.dataset.s==='Présent')S.lignes[+t.dataset.i].note=''; drawLignes();}
+  if(t.dataset.r!==undefined){S.lignes.splice(+t.dataset.r,1); drawLignes();}
+};
+$('sList').onchange=e=>{ if(e.target.dataset.m!==undefined) S.lignes[+e.target.dataset.m].note=e.target.value; };
+$('sRenfort').onchange=e=>{ if(e.target.value){S.lignes.push({gars:e.target.value,statut:'Présent',note:''}); drawLignes();} };
+$('sDate').onchange=renderSaisie; $('sEquipe').onchange=renderSaisie;
+
+$('btnSave').onclick=async()=>{
+  const date=$('sDate').value, equipe=$('sEquipe').value, dossier=$('sDossier').value.trim();
+  if(!S.lignes.length) return toast('Aucun gars dans la saisie.',true);
+  if(!dossier && S.lignes.some(l=>l.statut==='Présent') && !confirm('Pas de dossier renseigné. Enregistrer quand même ?')) return;
+  $('btnSave').disabled=true;
+  try{
+    await api('saveDay', S.code, {date, equipe, dossier, lignes:S.lignes});
+    delete S.weeks[mondayOf(date)];
+    toast('Enregistré ✔ ('+S.lignes.length+' gars)');
+    await renderSaisie();
+  }catch(e){ toast(e,true); }
+  $('btnSave').disabled=false;
+};
+
+/* ---------- SEMAINE ---------- */
+async function renderSemaine(force){
+  const m=S.weekMonday;
+  $('wTitle').textContent='Semaine du '+fmt(m).slice(4)+' au '+fmt(addDays(m,5)).slice(4);
+  $('wTable').innerHTML='<tr><td class="muted">Chargement…</td></tr>';
+  let w; try{ w=await loadWeek(m, force); }catch(e){ toast(e,true); return; }
+  const filtre=$('wEquipe').value;
+  const days=[0,1,2,3,4,5].map(i=>addDays(m,i));
+  if(w.journal.some(e=>e.date===addDays(m,6))) days.push(addDays(m,6));
+  const idx={}; w.journal.forEach(e=>idx[e.gars+'|'+e.date]=e);
+  const sam={}; w.samedis.forEach(s=>sam[s.gars]=s);
+  const tday=today();
+
+  // groupes : équipes + "Autres" (gars notés mais inconnus/inactifs)
+  const known=new Set(S.refs.gars.map(g=>g.nom));
+  const autres=[...new Set(w.journal.map(e=>e.gars).filter(g=>!known.has(g)))];
+  const groups=S.refs.equipes.map(e=>({nom:e.nom, chef:e.chef, gars:S.refs.gars.filter(g=>g.equipe===e.nom).map(g=>g.nom)}));
+  const sansEq=S.refs.gars.filter(g=>!S.refs.equipes.some(e=>e.nom===g.equipe)).map(g=>g.nom).concat(autres);
+  if(sansEq.length) groups.push({nom:'Autres', chef:'', gars:sansEq});
+
+  let h='<tr><th class="n">Gars</th>'+days.map(d=>'<th>'+fmt(d).split(' ').slice(0,2).join(' ')+'</th>').join('')+'</tr>';
+  groups.filter(g=>!filtre||g.nom===filtre).forEach(g=>{
+    h+='<tr class="team"><td class="n" style="background:#eef2f8">'+esc(g.nom)+(g.chef?' <span class="muted">· '+esc(g.chef)+'</span>':'')+'</td>'+
+      days.map(d=>{ const saisi=w.journal.some(e=>e.date===d&&e.equipe===g.nom);
+        if(g.nom==='Autres') return '<td class="d"></td>';
+        return '<td class="d">'+(saisi?'<span class="ok">✔ saisi</span>':(d<=tday&&parse(d).getDay()!==6&&parse(d).getDay()!==0?'<span class="ko">✗ manquant</span>':''))+'</td>';
+      }).join('')+'</tr>';
+    g.gars.forEach(n=>{
+      h+='<tr><td class="n">'+esc(n)+'</td>'+days.map(d=>{
+        const e=idx[n+'|'+d]; let c;
+        if(!e) c='<span class="none">—</span>';
+        else if(e.statut==='Absent') c='<span class="chip abs">ABS'+(e.note?' · '+esc(e.note):'')+'</span>';
+        else c=chip(e.dossier)+(e.equipe!==g.nom&&g.nom!=='Autres'?'<div class="muted" style="font-size:11px">avec '+esc(e.equipe)+'</div>':'');
+        if(parse(d).getDay()===6 && sam[n]) c+='<div><span class="sb s-'+esc(sam[n].statut)+'">Samedi : '+esc(sam[n].statut)+'</span></div>';
+        return '<td>'+c+'</td>';
+      }).join('')+'</tr>';
+    });
+  });
+  $('wTable').innerHTML=h;
+
+  // résumé
+  const abs=w.journal.filter(e=>e.statut==='Absent'&&(!filtre||e.equipe===filtre));
+  const parGars={}; abs.forEach(e=>(parGars[e.gars]=parGars[e.gars]||[]).push(fmt(e.date)+(e.note?' ('+e.note+')':'')));
+  const dossiers={}; w.journal.filter(e=>e.statut!=='Absent'&&e.dossier&&(!filtre||e.equipe===filtre)).forEach(e=>dossiers[e.dossier]=(dossiers[e.dossier]||0)+1);
+  $('wResume').innerHTML='<h3>Résumé de la semaine</h3>'+
+    '<h4>Absences ('+abs.length+' jour'+(abs.length>1?'s':'')+')</h4>'+
+    (abs.length?Object.keys(parGars).map(g=>'<div><b>'+esc(g)+'</b> : '+esc(parGars[g].join(', '))+'</div>').join(''):'<div class="muted">Aucune absence notée.</div>')+
+    '<h4>Jours-homme par dossier</h4>'+
+    (Object.keys(dossiers).length?Object.keys(dossiers).sort((a,b)=>dossiers[b]-dossiers[a]).map(d=>'<div>'+chip(d)+' '+dossiers[d]+' j</div>').join(''):'<div class="muted">Rien de saisi.</div>')+
+    (w.samedis.length?'<h4>Samedi</h4>'+w.samedis.map(s=>'<div>'+esc(s.gars)+' <span class="sb s-'+esc(s.statut)+'">'+esc(s.statut)+'</span> '+(s.dossier?chip(s.dossier):'')+'</div>').join(''):'');
+}
+$('wPrev').onclick=()=>{S.weekMonday=addDays(S.weekMonday,-7);renderSemaine()};
+$('wNext').onclick=()=>{S.weekMonday=addDays(S.weekMonday,7);renderSemaine()};
+$('wToday').onclick=()=>{S.weekMonday=mondayOf(today());renderSemaine()};
+$('wReload').onclick=()=>renderSemaine(true);
+$('wEquipe').onchange=()=>renderSemaine();
+
+/* ---------- SAMEDIS ---------- */
+function nextSaturdays(n){
+  const d=parse(today()); const k=(6-d.getDay()+7)%7; d.setDate(d.getDate()+k);
+  const out=[]; for(let i=0;i<n;i++){out.push(iso(d)); d.setDate(d.getDate()+7);} return out;
+}
+async function renderSamedis(){
+  $('qSamedi').innerHTML=nextSaturdays(8).map(s=>'<option value="'+s+'">'+fmt(s)+'</option>').join('');
+  $('qGars').innerHTML=S.refs.equipes.map(e=>{
+    const gs=S.refs.gars.filter(g=>g.equipe===e.nom); if(!gs.length) return '';
+    return '<h4>'+esc(e.nom)+'</h4><div class="checks">'+gs.map(g=>'<label><input type="checkbox" value="'+esc(g.nom)+'">'+esc(g.nom)+'</label>').join('')+'</div>';
+  }).join('');
+  await drawSamedis();
+}
+async function drawSamedis(){
+  $('qList').innerHTML='<p class="muted">Chargement…</p>';
+  let list; try{ list=await api('getSamedis', S.code, addDays(today(),-7)); }catch(e){ toast(e,true); return; }
+  if(!list.length){$('qList').innerHTML='<p class="muted">Aucune demande.</p>';return;}
+  let h='', cur='';
+  list.forEach(s=>{
+    if(s.samedi!==cur){cur=s.samedi; h+='<h4>'+fmt(s.samedi)+(s.samedi<today()?' <span class="muted">(passé)</span>':'')+'</h4>';}
+    h+='<div class="sam"><span class="nom">'+esc(s.gars)+'</span>'+(s.dossier?chip(s.dossier):'')+
+      (s.note?'<span class="muted">'+esc(s.note)+'</span>':'')+
+      '<select data-id="'+esc(s.id)+'">'+STATUTS.map(x=>'<option '+(x===s.statut?'selected':'')+'>'+x+'</option>').join('')+'</select>'+
+      '<button class="x" data-del="'+esc(s.id)+'" title="Supprimer">×</button></div>';
+  });
+  $('qList').innerHTML=h;
+}
+$('qList').onchange=async e=>{
+  const id=e.target.dataset.id; if(!id) return;
+  try{ await api('setSamediStatut', S.code, id, e.target.value); S.weeks={}; toast('Statut mis à jour ✔'); }catch(err){ toast(err,true); }
+};
+$('qList').onclick=async e=>{
+  const id=e.target.dataset.del; if(!id||!confirm('Supprimer cette demande ?')) return;
+  try{ await api('deleteSamedi', S.code, id); S.weeks={}; await drawSamedis(); }catch(err){ toast(err,true); }
+};
+$('btnSamedi').onclick=async()=>{
+  const gars=[...document.querySelectorAll('#qGars input:checked')].map(i=>i.value);
+  if(!gars.length) return toast('Coche au moins un gars.',true);
+  $('btnSamedi').disabled=true;
+  try{
+    await api('addSamedi', S.code, {samedi:$('qSamedi').value, gars, dossier:$('qDossier').value.trim(), note:$('qNote').value.trim()});
+    S.weeks={}; toast('Demande enregistrée ✔');
+    document.querySelectorAll('#qGars input:checked').forEach(i=>i.checked=false); $('qNote').value='';
+    await drawSamedis();
+  }catch(e){ toast(e,true); }
+  $('btnSamedi').disabled=false;
+};
+
+/* ---------- démarrage ---------- */
+const saved=store('mdc_code');
+if(saved!==null && saved!==undefined){ $('code').value=saved; login(saved); }
+</script>
+</body>
+</html>
