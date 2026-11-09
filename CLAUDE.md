@@ -42,6 +42,11 @@ tourner. Pas de Docker : la seule base est sur Supabase.
 Contrainte machine : MacBook Pro M2, 8 Go de RAM, peu d'espace disque
 → rester léger, ne rien installer d'inutile.
 
+**Sécurité Supabase** : le projet a été créé avec la « Data API » activée.
+Donc **chaque table** créée dans `schema.sql` doit avoir
+`ALTER TABLE ... ENABLE ROW LEVEL SECURITY;` (aucune policy) : ça bloque l'accès
+par la Data API, sans gêner l'app (propriétaire des tables).
+
 ## 3. Qui je suis et comment on travaille
 
 - Je suis en formation **Jedha Fullstack IA**. Ce projet sert à apprendre.
