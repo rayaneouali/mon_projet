@@ -4,3 +4,7 @@ gatherUsageStats = false
 
 [theme]
 primaryColor = "#1f4e8c"
+
+[client]
+# Cache le bouton « Deploy » et le menu développeur : les chefs voient une app épurée.
+toolbarMode = "viewer"

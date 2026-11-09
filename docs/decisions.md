@@ -22,3 +22,12 @@ Une ligne par décision : **quoi** — pourquoi.
 - **Verrou RLS sur chaque table** — le projet Supabase a la Data API activée, et ce verrou la bloque (voir `CLAUDE.md`).
 - **Tests dans un schéma temporaire `test_xxxx`** — ils ne touchent jamais aux vraies tables, même branchés sur Supabase.
 - **`scripts/seed.py --effacer`** — retire proprement les exemples avant la mise en service, sans toucher aux vraies données.
+
+## Saisie du jour
+
+- **Un seul menu par gars : « Présent » ou « Absent · motif »** — dans un `st.form`, on ne peut pas faire apparaître le menu « motif » après un clic sur « Absent ». Avec un seul menu, c'est un geste au lieu de deux, et le motif est toujours rempli.
+- **Une liste à cocher (multiselect) pour ajouter un renfort ou retirer un gars** — un seul outil fait les deux. Elle est placée au-dessus du formulaire, donc on règle la liste d'abord, puis les présences.
+- **Équipe mémorisée dans l'adresse (`?equipe=2`)** — remplace le stockage du téléphone de la version Google. Si le chef ajoute l'app à son écran d'accueil après avoir choisi son équipe, elle est déjà sélectionnée à chaque ouverture.
+- **Pas de saisie dans le futur** — le calendrier s'arrête à aujourd'hui, et le service refuse une date future, au cas où.
+- **Listes (équipes, gars, dossiers) gardées 60 s en mémoire (`st.cache_data`)** — moins d'allers-retours vers Supabase. La page Admin vide ce cache après chaque modification.
+- **« Aucun dossier » = valeur 0 dans le menu** — sinon Streamlit affiche « Choose an option » en anglais. Le 0 redevient « vide » (NULL) avant d'aller en base.
