@@ -67,6 +67,22 @@ par la Data API, sans gêner l'app (propriétaire des tables).
 ### À la fin de chaque étape validée
 - Un **commit** avec un message clair **en français**, puis un **push**.
 
+### Mode autonome (quand je le demande explicitement)
+Quand je lance une session en écrivant « MODE AUTONOME », le fonctionnement change
+**pour cette session seulement** :
+- tu enchaînes les étapes demandées **sans attendre mon OK** entre elles ;
+- après chaque étape : `uv run pytest` et `uv run ruff check .` doivent passer, et l'app
+  doit démarrer ; puis un commit « Étape N : … » et un push. Pas d'étape suivante si un test est rouge ;
+- si une commande échoue, tu diagnostiques et corriges toi-même ;
+- tu ne m'arrêtes que pour une action physique (me connecter à un service,
+  installer un outil qui demande mon mot de passe) : commande exacte, puis tu attends ;
+- pour un choix de bibliothèque ou de détail technique : l'option la plus simple et la plus
+  lisible, notée dans `docs/decisions.md` (une ligne : quoi, pourquoi) ;
+- interdit : changer la stack ci-dessous, effacer un fichier que tu n'as pas créé, force-push ;
+- à la fin seulement : récapitulatif court + `docs/apprendre.md` (pour réviser) +
+  liste de ce qu'il me reste à faire.
+Sans « MODE AUTONOME », la règle normale s'applique : plan court, puis attendre mon OK.
+
 ## 4. Règles de code (pour que je puisse lire et débugger)
 
 - **Clair plutôt que malin.** Fonctions courtes.

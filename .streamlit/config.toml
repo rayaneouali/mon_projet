@@ -1,0 +1,6 @@
+# Réglages Streamlit communs (local et en ligne). Les secrets vont dans secrets.toml, pas ici.
+[browser]
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#1f4e8c"

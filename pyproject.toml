@@ -1,0 +1,35 @@
+[project]
+name = "suivi-equipes"
+version = "0.1.0"
+description = "Suivi des équipes de monteurs MDC : présences, absences, dossiers, samedis"
+requires-python = ">=3.12"
+dependencies = [
+    "openpyxl>=3.1.5",
+    "pandas>=3.1.1",
+    "psycopg[binary]>=3.3.8",
+    "python-dotenv>=1.2.4",
+    "streamlit>=1.67.0",
+    "tzdata>=2026.6",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
+
+[tool.pytest.ini_options]
+# Les modules de l'app (config, db, services…) sont importés depuis le dossier app/,
+# exactement comme quand Streamlit lance app/Accueil.py.
+pythonpath = ["app"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Pour que ruff reconnaisse nos modules (config, db, services…) comme « les nôtres »
+src = ["app"]
+
+[tool.ruff.lint]
+# E/F : erreurs de base, I : ordre des imports, UP : syntaxe moderne, B : bugs fréquents
+select = ["E", "F", "I", "UP", "B"]
