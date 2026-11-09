@@ -25,18 +25,22 @@ Il décrit le projet, la stack, ma façon de travailler et les règles de code.
 
 ## 2. Stack (décidée — ne pas changer sans me demander)
 
+**Principe : le plus simple possible.** Le moins d'outils à installer et à faire
+tourner. Pas de Docker : la seule base est sur Supabase.
+
 | Brique | Choix |
 |---|---|
 | Langage | Python 3.12, environnement géré avec **uv** |
 | Interface | **Streamlit** (multipage) |
-| Base de données | **PostgreSQL**. Requêtes SQL écrites en clair avec **psycopg 3**, toutes regroupées dans un seul module. **Pas d'ORM.** |
-| En local | **Docker + Docker Compose** : un service `postgres`, un service `app` |
-| En ligne | Base **Supabase** (offre gratuite) + app sur **Streamlit Community Cloud**, déployée depuis GitHub |
-| Tests | **pytest** |
-| Configuration | Variables d'environnement (`.env` en local, **jamais commité**) |
+| Base de données | **PostgreSQL sur Supabase** (offre gratuite), la même en local et en ligne. Requêtes SQL écrites en clair avec **psycopg 3**, toutes regroupées dans un seul module. **Pas d'ORM.** |
+| En local | `uv run streamlit run app/Accueil.py` sur mon Mac, branché sur la base Supabase |
+| En ligne | App sur **Streamlit Community Cloud**, déployée depuis GitHub |
+| Tests | **pytest**. Les tests qui touchent la base travaillent dans un **schéma séparé** qu'ils créent puis effacent : ils ne touchent jamais aux vraies données. Ils tournent aussi sur GitHub Actions à chaque push. |
+| Configuration | Variables d'environnement (`.env` en local, **jamais commité** ; `st.secrets` en ligne) |
+| Code | GitHub `rayaneouali/mon_projet` (sera renommé `suivi-equipes`) |
 
 Contrainte machine : MacBook Pro M2, 8 Go de RAM, peu d'espace disque
-→ images Docker légères uniquement (`python:3.12-slim`, `postgres:16-alpine`).
+→ rester léger, ne rien installer d'inutile.
 
 ## 3. Qui je suis et comment on travaille
 
