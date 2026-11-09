@@ -57,3 +57,10 @@ def verifier_connexion() -> tuple[bool, str]:
     except ErreurMetier as erreur:
         return False, str(erreur)
     return True, "Base connectée"
+
+
+def appliquer_schema() -> None:
+    """Crée les tables manquantes (schema.sql est idempotent : sans risque si déjà fait)."""
+    with ouvrir_connexion() as conn:
+        conn.execute(FICHIER_SCHEMA.read_text(encoding="utf-8"))
+    logger.info("Schéma de la base vérifié (tables créées si besoin)")
