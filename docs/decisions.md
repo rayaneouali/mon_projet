@@ -31,3 +31,12 @@ Une ligne par décision : **quoi** — pourquoi.
 - **Pas de saisie dans le futur** — le calendrier s'arrête à aujourd'hui, et le service refuse une date future, au cas où.
 - **Listes (équipes, gars, dossiers) gardées 60 s en mémoire (`st.cache_data`)** — moins d'allers-retours vers Supabase. La page Admin vide ce cache après chaque modification.
 - **« Aucun dossier » = valeur 0 dans le menu** — sinon Streamlit affiche « Choose an option » en anglais. Le 0 redevient « vide » (NULL) avant d'aller en base.
+- **Dossier `app/pages_app/` au lieu de `app/pages/`** — avec un dossier nommé `pages/`, Streamlit crée tout seul l'ancien menu automatique. Ouvrir directement l'adresse `/Semaine` exécutait alors la page sans passer par `Accueil.py`, donc sans contrôle d'accès. Je l'ai vu en test : avec un autre nom, toutes les pages passent obligatoirement par `Accueil.py`.
+
+## Semaine
+
+- **Un tableau par équipe + un tableau « Saisies des chefs »** — plus lisible sur téléphone qu'un seul grand tableau avec des lignes d'en-tête mélangées.
+- **Un gars inactif reste visible s'il a des saisies cette semaine-là** — son historique ne disparaît pas. C'était le groupe « Autres » de la version Google, rangé ici dans sa propre équipe.
+- **Couleur du dossier calculée avec `zlib.crc32`** — `hash()` de Python change à chaque démarrage, alors qu'il faut toujours la même couleur pour le même dossier.
+- **Export Excel avec le `Styler` de pandas** — les couleurs du planning sont conservées dans le fichier, sans code en plus.
+- **Page Semaine en mode « large »** — sur ordinateur, le tableau prend toute la largeur. Sur téléphone, ça ne change rien.

@@ -13,7 +13,10 @@ st.set_page_config(page_title="Suivi équipes MDC", page_icon="🏗️")
 configurer_logging()
 interface.preparer_base_ou_arreter()
 
-pages = [st.Page("pages/1_Saisie.py", title="Saisie du jour", icon="📝", default=True)]
+pages = [
+    st.Page("pages_app/1_Saisie.py", title="Saisie du jour", icon="📝", default=True),
+    st.Page("pages_app/2_Semaine.py", title="Semaine", icon="📅"),
+]
 navigation = st.navigation(pages, position="top")
 st.sidebar.success("Base connectée")
 navigation.run()
