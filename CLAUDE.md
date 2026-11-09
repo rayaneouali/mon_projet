@@ -1,0 +1,77 @@
+# CLAUDE.md — Suivi équipes MDC
+
+Ce fichier est relu automatiquement par Claude Code à chaque session.
+Il décrit le projet, la stack, ma façon de travailler et les règles de code.
+
+---
+
+## 1. Contexte
+
+- Je gère le suivi des dossiers chez **MDC**, une entreprise familiale de montage
+  de rayonnage industriel (~14 salariés, plusieurs équipes de monteurs).
+- Chaque semaine, je dois savoir :
+  - qui est dans quelle équipe ;
+  - qui est absent, et pourquoi ;
+  - sur quel dossier / chantier chaque équipe travaille ;
+  - à qui on a demandé de travailler un samedi.
+- **Objectif** : une app web simple qui remplace mon agenda, remplie chaque jour
+  par les chefs d'équipe depuis leur téléphone.
+  - Elle doit être **fiable**, **gratuite** et **rester simple** :
+    pas d'heures de pointage, pas de pauses.
+- **Version de référence** : une première version existe en Google Apps Script
+  (`Code.gs` et `Index.html`), rangée dans `docs/reference_apps_script/`.
+  C'est le **cahier des charges fonctionnel** : on reprend ses **règles métier**,
+  pas sa technique.
+
+## 2. Stack (décidée — ne pas changer sans me demander)
+
+| Brique | Choix |
+|---|---|
+| Langage | Python 3.12, environnement géré avec **uv** |
+| Interface | **Streamlit** (multipage) |
+| Base de données | **PostgreSQL**. Requêtes SQL écrites en clair avec **psycopg 3**, toutes regroupées dans un seul module. **Pas d'ORM.** |
+| En local | **Docker + Docker Compose** : un service `postgres`, un service `app` |
+| En ligne | Base **Supabase** (offre gratuite) + app sur **Streamlit Community Cloud**, déployée depuis GitHub |
+| Tests | **pytest** |
+| Configuration | Variables d'environnement (`.env` en local, **jamais commité**) |
+
+Contrainte machine : MacBook Pro M2, 8 Go de RAM, peu d'espace disque
+→ images Docker légères uniquement (`python:3.12-slim`, `postgres:16-alpine`).
+
+## 3. Qui je suis et comment on travaille
+
+- Je suis en formation **Jedha Fullstack IA**. Ce projet sert à apprendre.
+- Je ne vise pas à devenir expert codeur : je veux **comprendre le système**,
+  savoir **superviser**, **repérer une erreur** dans le code et **débugger**.
+
+### Avant chaque étape
+- Donne-moi un **plan court** : fichiers créés / modifiés, et ce que fait chacun.
+- **Attends mon OK** avant de coder.
+
+### Après chaque étape, explique simplement ce que tu as fait
+- Définis chaque terme technique **la première fois** que tu l'utilises,
+  sans empiler le jargon.
+- Montre-moi les **3 à 5 lignes clés** à savoir reconnaître (pas tout le code).
+- Donne-moi **une commande** pour vérifier moi-même que ça marche.
+- Termine par **une seule question** de compréhension.
+
+### À la fin de chaque étape validée
+- Un **commit** avec un message clair **en français**, puis un **push**.
+
+## 4. Règles de code (pour que je puisse lire et débugger)
+
+- **Clair plutôt que malin.** Fonctions courtes.
+- **Noms explicites en français** pour le métier : `gars`, `equipe`, `dossier`,
+  `saisie`, `samedi`.
+- **Type hints partout.** Une **docstring d'une ligne** par fonction.
+- **Séparation stricte en trois couches** :
+  - interface → pages Streamlit ;
+  - logique métier → `services` ;
+  - accès base → `db`.
+  - **Aucune requête SQL dans les pages.**
+- **Logging** avec le module `logging` (jamais de `print`).
+  Niveau réglable via la variable `LOG_LEVEL`.
+- **Erreurs** : message en **français simple** pour l'utilisateur,
+  **détail technique dans les logs**.
+- **Aucun secret dans le code.** Un fichier `.env.example` documenté.
+- **Un test pytest pour chaque règle métier.**
