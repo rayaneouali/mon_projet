@@ -40,3 +40,9 @@ Une ligne par décision : **quoi** — pourquoi.
 - **Couleur du dossier calculée avec `zlib.crc32`** — `hash()` de Python change à chaque démarrage, alors qu'il faut toujours la même couleur pour le même dossier.
 - **Export Excel avec le `Styler` de pandas** — les couleurs du planning sont conservées dans le fichier, sans code en plus.
 - **Page Semaine en mode « large »** — sur ordinateur, le tableau prend toute la largeur. Sur téléphone, ça ne change rien.
+
+## Samedis
+
+- **Un doublon n'empêche pas de créer les autres demandes** — chaque gars est inséré dans une sous-transaction (« savepoint »). Si la contrainte UNIQUE refuse un gars, on annule seulement celui-là et on affiche : « Déjà demandé pour : Karim ».
+- **Le menu de statut enregistre tout seul (callback `on_change`)** — pas de bouton « Enregistrer » en plus. Le menu affiche toujours l'état réel de la base.
+- **Suppression en deux clics (« Supprimer » puis « Oui, supprimer »)** — la confirmation est demandée dans la page elle-même, sans fenêtre surgissante (plus fiable sur téléphone).
