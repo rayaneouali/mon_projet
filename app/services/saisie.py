@@ -91,6 +91,12 @@ def verifier_saisie(jour: date, lignes: list[LigneSaisie], aujourdhui: date) -> 
             raise ErreurMetier("Statut inconnu : choisis Présent ou Absent.")
 
 
+def retirer_gars_inconnus(gars_ids: list[int], ids_connus: list[int]) -> list[int]:
+    """Enlève de la saisie en cours les gars qui n'existent plus (supprimés dans Admin)."""
+    connus = set(ids_connus)
+    return [gars_id for gars_id in gars_ids if gars_id in connus]
+
+
 def besoin_confirmation(dossier_id: int | None, lignes: list[LigneSaisie]) -> bool:
     """Vrai s'il y a des présents mais aucun dossier : on demande confirmation."""
     return dossier_id is None and any(ligne.statut == "present" for ligne in lignes)

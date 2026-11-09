@@ -44,7 +44,7 @@ def preparer_widgets(contexte: str, etat: saisie.EtatSaisie) -> None:
     st.session_state["saisie_dossier"] = etat.dossier_id or AUCUN_DOSSIER
     for ligne in etat.lignes:
         st.session_state[cle_choix(contexte, ligne.gars_id)] = saisie.ligne_vers_choix(ligne)
-    st.session_state.pop("saisie_a_confirmer", None)
+    st.session_state.pop("saisie_confirmer", None)
 
 
 def enregistrer(
@@ -64,7 +64,7 @@ def enregistrer(
     if ok:
         interface.noter_message("saisie_message", f"Enregistré : {nombre} gars ✔")
         st.session_state.pop("saisie_contexte", None)  # force le rechargement depuis la base
-        st.session_state.pop("saisie_a_confirmer", None)
+        st.session_state.pop("saisie_confirmer", None)
         st.rerun()
 
 
@@ -103,6 +103,10 @@ else:
     st.info(f"Pas encore de saisie pour {refs.nom_equipe(equipe_id)} le {dates.formater(jour)}")
 
 # ------------------------------------------------------------------ qui est dans la saisie
+# Un gars supprimé dans Admin entre-temps est retiré de la liste (sinon la page planterait).
+st.session_state["saisie_gars"] = saisie.retirer_gars_inconnus(
+    st.session_state["saisie_gars"], [g["id"] for g in refs.gars]
+)
 options = [g["id"] for g in refs.gars_actifs()]
 options += [gid for gid in st.session_state["saisie_gars"] if gid not in options]
 gars_ids: list[int] = st.multiselect(
@@ -120,6 +124,10 @@ dossiers = [AUCUN_DOSSIER] + [d["id"] for d in refs.dossiers_actifs()]
 if st.session_state.get("saisie_dossier") not in dossiers:
     dossiers.append(st.session_state["saisie_dossier"])  # dossier fermé depuis, mais déjà saisi
 
+# Après un premier « Enregistrer » sans dossier, un 2e bouton apparaît DANS le formulaire :
+# ainsi, c'est bien la saisie affichée (avec les dernières corrections) qui est enregistrée.
+attente_confirmation = st.session_state.get("saisie_confirmer") == contexte
+
 with st.form("form_saisie"):
     st.selectbox(
         "Dossier / chantier", dossiers, format_func=refs.libelle_dossier, key="saisie_dossier"
@@ -132,30 +140,24 @@ with st.form("form_saisie"):
                 f"Déjà noté dans {etat.ailleurs[gars_id]} ce jour-là : enregistrer le déplace ici.",
                 icon="⚠️",
             )
-    envoye = st.form_submit_button("Enregistrer", type="primary", width="stretch")
+    confirme = False
+    if attente_confirmation:
+        st.warning("Aucun dossier choisi alors qu'il y a des présents. Choisis un dossier, ou :")
+        confirme = st.form_submit_button(
+            "Oui, enregistrer sans dossier", type="primary", width="stretch"
+        )
+    envoye = st.form_submit_button(
+        "Enregistrer", type="secondary" if attente_confirmation else "primary", width="stretch"
+    )
 
-if envoye:
+if envoye or confirme:
     lignes = [
         saisie.choix_vers_ligne(gid, st.session_state.get(cle_choix(contexte, gid), saisie.PRESENT))
         for gid in gars_ids
     ]
     dossier_id = st.session_state["saisie_dossier"] or None  # AUCUN_DOSSIER (0) → None
-    if saisie.besoin_confirmation(dossier_id, lignes):
-        st.session_state["saisie_a_confirmer"] = {
-            "contexte": contexte,
-            "dossier_id": dossier_id,
-            "lignes": lignes,
-        }
+    if envoye and saisie.besoin_confirmation(dossier_id, lignes):
+        st.session_state["saisie_confirmer"] = contexte
+        st.rerun()
     else:
         enregistrer(jour, equipe_id, dossier_id, lignes)
-
-# ------------------------------------------------------------------ confirmation sans dossier
-attente = st.session_state.get("saisie_a_confirmer")
-if attente and attente["contexte"] == contexte:
-    st.warning("Aucun dossier choisi alors qu'il y a des présents. Enregistrer quand même ?")
-    oui, non = st.columns(2)
-    if oui.button("Oui, enregistrer", type="primary", width="stretch"):
-        enregistrer(jour, equipe_id, attente["dossier_id"], attente["lignes"])
-    if non.button("Non, je choisis un dossier", width="stretch"):
-        st.session_state.pop("saisie_a_confirmer", None)
-        st.rerun()

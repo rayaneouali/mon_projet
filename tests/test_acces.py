@@ -39,3 +39,10 @@ def test_jeton_de_l_adresse() -> None:
     assert acces.role_depuis_jeton(jeton, CHEFS, ADMIN) == acces.ROLE_CHEFS
     assert acces.role_depuis_jeton(jeton, "999999", ADMIN) is None
     assert acces.role_depuis_jeton("n-importe-quoi", CHEFS, ADMIN) is None
+
+
+def test_codes_absents_ou_identiques_signales() -> None:
+    """Codes manquants ou identiques : message clair (sinon tout le monde serait admin)."""
+    assert "pas configurés" in acces.probleme_de_codes("", ADMIN)
+    assert "identiques" in acces.probleme_de_codes("123456", " 123456")
+    assert acces.probleme_de_codes(CHEFS, ADMIN) is None

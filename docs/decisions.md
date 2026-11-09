@@ -55,3 +55,19 @@ Une ligne par décision : **quoi** — pourquoi.
 - **Pas de colonnes « obligatoires » dans les tableaux Admin** — sinon, une ligne incomplète disparaît sans prévenir. Vu en test : ça affichait « aucun changement ». Maintenant, le service répond « Le nom du gars est obligatoire ».
 - **Une équipe avec des gars ou des saisies ne se supprime pas** — message clair : on déplace d'abord les gars, ou on renomme l'équipe.
 - **Données d'exemple jamais créées automatiquement** — elles n'existent que si tu lances `scripts/seed.py`. Tu les retires avec `--effacer`, avant de donner l'app aux chefs.
+
+## Relecture critique (étape 8)
+
+Défauts trouvés et corrigés, chacun avec un test :
+- **Confirmation « sans dossier » qui enregistrait d'anciennes valeurs** — si le chef corrigeait un statut après l'avertissement, la correction était perdue. Le bouton « Oui, enregistrer sans dossier » est maintenant DANS le formulaire : c'est la saisie affichée qui part (vérifié dans le navigateur).
+- **Gars supprimé dans Admin pendant une saisie en cours** — la page du chef plantait. Il est maintenant retiré de la liste (`retirer_gars_inconnus`).
+- **CODE_CHEFS identique à CODE_ADMIN** — tout le monde devenait administrateur. L'app refuse maintenant cette configuration, avec un message clair.
+- **Colonnes « obligatoires » de l'Admin** — une ligne incomplète disparaissait sans message (corrigé à l'étape 7).
+- **Dossier `pages/`** — il permettait d'ouvrir une page sans passer par le contrôle d'accès (corrigé à l'étape 5).
+
+Cas vérifiés, déjà couverts par des tests : équipe sans gars, gars inactif avec historique (Semaine et Admin), date future, deux chefs qui enregistrent en même temps, demande de samedi en double, nom en double dans Admin, transaction annulée en cas d'erreur.
+
+Limites connues, acceptées pour rester simple :
+- **Si deux chefs modifient la MÊME équipe le même jour, le dernier qui enregistre gagne.** C'est le même comportement que dans la version Google.
+- **Une page interdite tapée à la main affiche la fenêtre Streamlit « Page not found », en anglais.** Elle mène ensuite à la page autorisée.
+- **Le choix « Select all » de la liste des gars reste en anglais.** C'est un texte interne de Streamlit, qu'on ne peut pas traduire.

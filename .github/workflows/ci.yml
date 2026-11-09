@@ -1,0 +1,35 @@
+# Intégration continue : à chaque push, GitHub vérifie le style (ruff) et lance les tests
+# (pytest) avec une vraie base PostgreSQL jetable. Résultat : onglet « Actions » du dépôt.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      CODE_CHEFS: "111111"
+      CODE_ADMIN: "222222"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Installer les dépendances
+        run: uv sync --locked
+      - name: Style du code (ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Tests (pytest)
+        run: uv run pytest -v

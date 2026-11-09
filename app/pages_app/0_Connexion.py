@@ -12,11 +12,9 @@ if ok:
 else:
     st.error(message)
 
-if not acces.codes_configures():
-    st.error(
-        "Les codes d'accès ne sont pas configurés (CODE_CHEFS et CODE_ADMIN). "
-        "Voir docs/mise_en_ligne.md."
-    )
+probleme = acces.probleme_de_configuration()
+if probleme:
+    st.error(probleme + " Voir docs/mise_en_ligne.md.")
     st.stop()
 
 with st.form("form_connexion"):

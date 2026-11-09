@@ -55,9 +55,18 @@ def autorise(role: str | None, role_requis: str) -> bool:
     return role is not None and NIVEAU[role] >= NIVEAU[role_requis]
 
 
-def codes_configures() -> bool:
-    """Vrai si les deux codes d'accès sont définis."""
-    return bool(config.code_chefs() and config.code_admin())
+def probleme_de_codes(code_chefs: str, code_admin: str) -> str | None:
+    """Message si les codes sont mal configurés (absents ou identiques), sinon None."""
+    if not code_chefs or not code_admin:
+        return "Les codes d'accès ne sont pas configurés (CODE_CHEFS et CODE_ADMIN)."
+    if code_chefs.strip() == code_admin.strip():
+        return "CODE_CHEFS et CODE_ADMIN sont identiques : tout le monde serait administrateur."
+    return None
+
+
+def probleme_de_configuration() -> str | None:
+    """Vérifie les codes lus dans la configuration (voir probleme_de_codes)."""
+    return probleme_de_codes(config.code_chefs(), config.code_admin())
 
 
 # ---------------------------------------------------------------- côté Streamlit
@@ -70,6 +79,8 @@ def _code_du_role(role: str) -> str:
 
 def role_connecte() -> str | None:
     """Rôle de la personne : mémorisé pour la session, ou retrouvé grâce au jeton de l'adresse."""
+    if probleme_de_configuration():
+        return None  # codes absents ou identiques : personne n'entre
     role = st.session_state.get("role")
     if role:
         return role
@@ -83,6 +94,8 @@ def role_connecte() -> str | None:
 
 def connecter(code: str) -> bool:
     """Vérifie le code ; s'il est bon, mémorise le rôle et met le jeton dans l'adresse."""
+    if probleme_de_configuration():
+        return False
     role = verifier_code(code, config.code_chefs(), config.code_admin())
     if role is None:
         logger.warning("Code d'accès incorrect")

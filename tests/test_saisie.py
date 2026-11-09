@@ -148,3 +148,8 @@ def test_renfort_deplace_depuis_l_autre_equipe(exemples: dict[str, int]) -> None
         "Karim": "Équipe 1",
         "Samir": "Équipe 1",
     }
+
+
+def test_gars_supprime_retire_de_la_saisie_en_cours() -> None:
+    """Un gars supprimé dans Admin pendant une saisie est retiré (la page ne plante pas)."""
+    assert saisie.retirer_gars_inconnus([1, 2, 3], ids_connus=[1, 3, 4]) == [1, 3]
