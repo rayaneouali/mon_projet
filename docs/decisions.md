@@ -79,3 +79,11 @@ Limites connues, acceptées pour rester simple :
 - **`config.py` lit d'abord les variables d'environnement, puis `st.secrets`** — même code en local (`.env`) et en ligne (Secrets). Rien d'autre à changer.
 - **Le schéma est appliqué au démarrage du serveur (`st.cache_resource`)** — sur Supabase comme en local, les tables se créent toutes seules au premier lancement. Aucune donnée d'exemple en production.
 - **Lien du badge vers `rayaneouali/suivi-equipes`** — c'est le dépôt final. Le badge s'affichera une fois la partie A de la mise en ligne faite.
+
+## Sauvegarde et réveil
+
+- **Sauvegarde en CSV (séparateur `;`, avec BOM) plutôt qu'avec `pg_dump`** — `pg_dump` doit avoir la même version que le serveur Supabase (source fréquente d'erreurs). Le CSV passe par psycopg, déjà installé, et s'ouvre directement dans Excel, accents compris.
+- **Restauration avec `scripts/restauration.py … --oui`** — vide la base puis recharge tout en UNE transaction, et recale les compteurs d'id. Sans `--oui`, le script explique et s'arrête. Pas de base Docker locale : on restaure dans la base de `DATABASE_URL`.
+- **Réveil : deux séries de cron (hiver / été) et un tri selon le décalage horaire de Paris** — GitHub ne connaît que l'heure UTC. Le run de « l'autre saison » s'arrête en quelques secondes. Un run en retard (GitHub décale parfois de 10-15 min) reste valable.
+- **Playwright fixé à la version 1.63.0, installé seulement dans GitHub Actions** — rien à installer sur le Mac.
+- **Workflows inactifs sans leur secret** — ils affichent une note au lieu d'échouer en rouge.

@@ -1,0 +1,51 @@
+# Sauvegarde hebdomadaire de la base Supabase : un fichier CSV par table, gardé 90 jours
+# comme « artifact » téléchargeable (onglet Actions → le run → en bas, « Artifacts »).
+# Inactive tant que le secret DATABASE_URL n'est pas défini (voir docs/mise_en_ligne.md).
+name: Sauvegarde hebdomadaire
+
+on:
+  schedule:
+    # cron = « minute heure jour-du-mois mois jour-de-semaine », en heure UTC.
+    # Dimanche (0) à 19h00 UTC = 20h à Paris en hiver, 21h en été.
+    - cron: "0 19 * * 0"
+  workflow_dispatch: # bouton « Run workflow » pour la lancer à la main
+
+jobs:
+  sauvegarde:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Vérifier que le secret DATABASE_URL existe
+        id: secret
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::notice::Secret DATABASE_URL non défini : sauvegarde désactivée (voir docs/mise_en_ligne.md)."
+            echo "present=non" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=oui" >> "$GITHUB_OUTPUT"
+            echo "jour=$(TZ=Europe/Paris date +%F)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secret.outputs.present == 'oui'
+
+      - uses: astral-sh/setup-uv@v6
+        if: steps.secret.outputs.present == 'oui'
+
+      - name: Installer les dépendances
+        if: steps.secret.outputs.present == 'oui'
+        run: uv sync --locked --no-dev
+
+      - name: Exporter les tables en CSV
+        if: steps.secret.outputs.present == 'oui'
+        run: uv run python scripts/sauvegarde.py --dossier sauvegarde
+
+      - name: Garder la sauvegarde 90 jours
+        if: steps.secret.outputs.present == 'oui'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sauvegarde-${{ steps.secret.outputs.jour }}
+          path: sauvegarde/
+          retention-days: 90
+          if-no-files-found: error

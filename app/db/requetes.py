@@ -8,9 +8,10 @@ Règles :
 
 import logging
 from datetime import date
-from typing import Any
+from typing import Any, BinaryIO
 
 import psycopg
+from psycopg import sql
 
 logger = logging.getLogger("suivi.db.requetes")
 
@@ -343,3 +344,43 @@ def effacer_exemples(
             """,
             (equipes,),
         )
+
+
+# ---------------------------------------------------------------- sauvegarde / restauration
+
+TABLES_DANS_L_ORDRE = ["equipes", "gars", "dossiers", "saisies", "demandes_samedi"]
+
+# Format CSV « à la française » (séparateur ;) pour qu'il s'ouvre directement dans Excel.
+# Un nom de table n'est pas une valeur : il s'insère avec sql.Identifier, jamais avec %s.
+EXPORT_CSV = sql.SQL("COPY {table} TO STDOUT WITH (FORMAT csv, HEADER true, DELIMITER ';')")
+IMPORT_CSV = sql.SQL("COPY {table} FROM STDIN WITH (FORMAT csv, HEADER true, DELIMITER ';')")
+RECALER_COMPTEUR = sql.SQL(
+    "SELECT setval(pg_get_serial_sequence({nom}, 'id'), "
+    "COALESCE((SELECT MAX(id) FROM {table}), 0) + 1, false)"
+)
+
+
+def exporter_table_csv(conn: psycopg.Connection, table: str, fichier: BinaryIO) -> None:
+    """Écrit toute une table dans un fichier CSV (commande COPY de PostgreSQL)."""
+    requete = EXPORT_CSV.format(table=sql.Identifier(table))
+    logger.debug("SQL : %s", requete.as_string(conn))
+    with conn.cursor().copy(requete) as copie:
+        for morceau in copie:
+            fichier.write(bytes(morceau))
+
+
+def vider_toutes_les_tables(conn: psycopg.Connection) -> None:
+    """Efface TOUTES les données (avant une restauration)."""
+    _executer(conn, "TRUNCATE demandes_samedi, saisies, gars, dossiers, equipes RESTART IDENTITY")
+
+
+def importer_table_csv(conn: psycopg.Connection, table: str, fichier: BinaryIO) -> None:
+    """Recharge une table depuis un fichier CSV, puis recale son compteur d'id."""
+    requete = IMPORT_CSV.format(table=sql.Identifier(table))
+    logger.debug("SQL : %s", requete.as_string(conn))
+    with conn.cursor().copy(requete) as copie:
+        copie.write(fichier.read())
+    # Le prochain id créé doit être plus grand que tous les id restaurés.
+    recalage = RECALER_COMPTEUR.format(nom=sql.Literal(table), table=sql.Identifier(table))
+    logger.debug("SQL : %s", recalage.as_string(conn))
+    conn.execute(recalage)

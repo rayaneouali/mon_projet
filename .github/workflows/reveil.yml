@@ -1,0 +1,62 @@
+# Réveil de l'app Streamlit Cloud en semaine, pour que les chefs ne tombent pas sur la
+# page « endormie ». Un vrai navigateur (Playwright) ouvre l'app et clique sur
+# « Yes, get this app back up! » si besoin.
+# Inactif tant que le secret APP_URL n'est pas défini (voir docs/mise_en_ligne.md).
+name: Réveil de l'app
+
+on:
+  schedule:
+    # PIÈGE DU FUSEAU HORAIRE : GitHub compte en heure UTC.
+    # Paris = UTC+1 en hiver, UTC+2 en été. Pour 6h30, 9h30, 12h30, 15h30 à Paris,
+    # on programme donc les deux séries ; le job ne garde que celle de la saison en cours.
+    # Format : minute heure jour-du-mois mois jour-de-semaine (1-5 = lundi à vendredi).
+    - cron: "30 5,8,11,14 * * 1-5" # hiver (UTC+1)
+    - cron: "30 4,7,10,13 * * 1-5" # été (UTC+2)
+  workflow_dispatch: # bouton « Run workflow » pour le lancer à la main
+
+jobs:
+  reveil:
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ secrets.APP_URL }}
+      EVENEMENT: ${{ github.event_name }}
+      CRON_DECLENCHEUR: ${{ github.event.schedule }}
+      CRON_HIVER: "30 5,8,11,14 * * 1-5"
+    steps:
+      - name: Faut-il réveiller maintenant ?
+        id: decision
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "::notice::Secret APP_URL non défini : réveil désactivé (voir docs/mise_en_ligne.md)."
+            echo "lancer=non" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          decalage=$(TZ=Europe/Paris date +%z)  # +0100 en hiver, +0200 en été
+          if [ "$EVENEMENT" = "workflow_dispatch" ]; then
+            lancer=oui
+          elif [ "$CRON_DECLENCHEUR" = "$CRON_HIVER" ] && [ "$decalage" = "+0100" ]; then
+            lancer=oui
+          elif [ "$CRON_DECLENCHEUR" != "$CRON_HIVER" ] && [ "$decalage" = "+0200" ]; then
+            lancer=oui
+          else
+            lancer=non
+            echo "Horaire de l'autre saison (Paris est en $decalage) : rien à faire."
+          fi
+          echo "lancer=$lancer" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.decision.outputs.lancer == 'oui'
+
+      - uses: astral-sh/setup-uv@v6
+        if: steps.decision.outputs.lancer == 'oui'
+
+      - name: Installer le navigateur
+        if: steps.decision.outputs.lancer == 'oui'
+        run: uv run --no-project --with playwright==1.63.0 playwright install --with-deps chromium
+
+      - name: Ouvrir l'app (et la réveiller si elle dort)
+        if: steps.decision.outputs.lancer == 'oui'
+        run: |
+          resume=$(uv run --no-project --with playwright==1.63.0 python scripts/reveil.py "$APP_URL")
+          echo "$resume"
+          echo "$resume" >> "$GITHUB_STEP_SUMMARY"
