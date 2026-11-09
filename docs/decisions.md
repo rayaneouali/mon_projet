@@ -5,7 +5,7 @@ Une ligne par décision : **quoi** — pourquoi.
 ## Organisation
 
 - **Pas de Docker, Supabase est la seule base** — tu as demandé le projet le plus simple possible (9 nov.) : rien à installer à part uv, pas de RAM prise sur le Mac 8 Go. `CLAUDE.md` fait foi, même si le prompt autonome mentionnait encore Docker.
-- **Dépôt `rayaneouali/mon_projet`, branche `claude/vigilant-archimedes-fqtvk9`** — c'est le dépôt de cette session. Je ne peux pas créer un nouveau dépôt depuis ici. Tu le renommes `suivi-equipes` sur GitHub, puis tu fusionnes la branche dans `main`.
+- **Code poussé sur `rayaneouali/mon_projet`, branche `claude/vigilant-archimedes-fqtvk9`** — c'est le seul dépôt accessible depuis cette session, et je ne peux pas en créer un. Ce dépôt contient aussi un autre projet (branche `claude/relaxed-bell-oepx9e`). Donc pas de renommage : crée `suivi-equipes` et pousse-y cette branche comme `main` (voir `docs/mise_en_ligne.md`, partie A).
 - **Imports « courts » (`from services import saisie`)** — Streamlit ajoute le dossier `app/` au chemin Python. Pytest fait pareil grâce à `pythonpath = ["app"]`, donc aucun paquet à installer.
 - **Étape 2 sans Dockerfile ni docker-compose** — conséquence directe de « pas de Docker ». L'étape garde le reste : config, connexion, page « Base connectée ».
 - **Une connexion ouverte par action (pas de « pool » de connexions)** — c'est le plus simple à lire. Pour 14 personnes, c'est largement suffisant.
@@ -71,3 +71,11 @@ Limites connues, acceptées pour rester simple :
 - **Si deux chefs modifient la MÊME équipe le même jour, le dernier qui enregistre gagne.** C'est le même comportement que dans la version Google.
 - **Une page interdite tapée à la main affiche la fenêtre Streamlit « Page not found », en anglais.** Elle mène ensuite à la page autorisée.
 - **Le choix « Select all » de la liste des gars reste en anglais.** C'est un texte interne de Streamlit, qu'on ne peut pas traduire.
+
+## Mise en ligne
+
+- **`requirements.txt` généré par uv (`uv export`)** — c'est le format que Streamlit Cloud lit à coup sûr. `pyproject.toml` + `uv.lock` restent la référence, et la CI vérifie que les deux sont d'accord.
+- **Python 3.12 choisi dans « Advanced settings » de Streamlit Cloud** — la plateforme ne lit pas `.python-version`.
+- **`config.py` lit d'abord les variables d'environnement, puis `st.secrets`** — même code en local (`.env`) et en ligne (Secrets). Rien d'autre à changer.
+- **Le schéma est appliqué au démarrage du serveur (`st.cache_resource`)** — sur Supabase comme en local, les tables se créent toutes seules au premier lancement. Aucune donnée d'exemple en production.
+- **Lien du badge vers `rayaneouali/suivi-equipes`** — c'est le dépôt final. Le badge s'affichera une fois la partie A de la mise en ligne faite.

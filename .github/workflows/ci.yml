@@ -33,3 +33,7 @@ jobs:
           uv run ruff format --check .
       - name: Tests (pytest)
         run: uv run pytest -v
+      - name: requirements.txt à jour (lu par Streamlit Cloud)
+        run: |
+          uv export --no-dev --no-hashes --format requirements-txt --frozen -o requirements.txt
+          git diff --exit-code requirements.txt
